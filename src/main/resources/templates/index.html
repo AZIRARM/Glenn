@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glenn - Health Monitor Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        .status-success { color: #198754; }
+        .status-danger { color: #dc3545; }
+        .card {
+            transition: all 0.3s;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .refresh-spinner { display: none; }
+        .refreshing .refresh-spinner { display: inline-block; }
+        .refresh-spinner {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .stat-card {
+            background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+        .app-card {
+            border-left: 4px solid transparent;
+        }
+        .app-card.up {
+            border-left-color: #198754;
+        }
+        .app-card.down {
+            border-left-color: #dc3545;
+        }
+        .badge-filter {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .badge-filter:hover {
+            transform: scale(1.05);
+        }
+        .badge-filter.active {
+            background-color: #0d6efd !important;
+            color: white !important;
+        }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-dark bg-dark">
+    <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1">
+                <i class="bi bi-shield-check"></i>
+                Glenn - Health Monitor
+                <small class="ms-2 fs-6 text-white-50">
+                    <i class="bi bi-heart-pulse"></i>
+                    Named after the healer from Monster Girl Doctor
+                </small>
+            </span>
+        <span class="text-white-50">
+                <i class="bi bi-clock"></i>
+                <span id="lastUpdate" th:text="${currentTime}"></span>
+            </span>
+    </div>
+</nav>
+
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1">Total Apps</h6>
+                        <h2 class="mb-0" id="totalApps" th:text="${#lists.size(apps)}">0</h2>
+                    </div>
+                    <i class="bi bi-grid-3x3-gap-fill fs-1 text-primary opacity-50"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1">Healthy</h6>
+                        <h2 class="mb-0 text-success" id="onlineCount">0</h2>
+                    </div>
+                    <i class="bi bi-check-circle-fill fs-1 text-success opacity-50"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1">Unhealthy</h6>
+                        <h2 class="mb-0 text-danger" id="offlineCount">0</h2>
+                    </div>
+                    <i class="bi bi-exclamation-triangle-fill fs-1 text-danger opacity-50"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1">Global Uptime</h6>
+                        <h2 class="mb-0 text-info" id="globalUptime">98.5%</h2>
+                    </div>
+                    <i class="bi bi-graph-up-arrow fs-1 text-info opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col">
+            <div class="btn-group" role="group">
+                <button class="btn btn-outline-primary badge-filter active" onclick="filterAll()">
+                    <i class="bi bi-list-ul"></i> All
+                </button>
+                <button class="btn btn-outline-success badge-filter" onclick="filterUp()">
+                    <i class="bi bi-check-circle"></i> Healthy
+                </button>
+                <button class="btn btn-outline-danger badge-filter" onclick="filterDown()">
+                    <i class="bi bi-exclamation-triangle"></i> Unhealthy
+                </button>
+            </div>
+        </div>
+        <div class="col text-end">
+            <a href="/add" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i>
+                Add Application
+            </a>
+            <button class="btn btn-outline-secondary" onclick="refreshData()">
+                <i class="bi bi-arrow-repeat refresh-spinner"></i>
+                <i class="bi bi-arrow-repeat"></i>
+                Refresh
+            </button>
+        </div>
+    </div>
+
+    <div class="row" id="apps-container">
+        <div th:each="app : ${apps}" class="col-xl-4 col-md-6 mb-4"
+             th:data-status="${latestStatuses.get(app.id) != null && latestStatuses.get(app.id).isUp ? 'up' : 'down'}">
+
+            <div class="card h-100 app-card"
+                 th:classappend="${latestStatuses.get(app.id) != null && latestStatuses.get(app.id).isUp ? 'up' : 'down'}">
+
+                <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 text-truncate" th:text="${app.name}" style="max-width: 150px;">App Name</h5>
+
+                    <span th:id="'status-badge-' + ${app.id}"
+                          th:class="|badge ${latestStatuses.get(app.id) != null && latestStatuses.get(app.id).isUp ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'}|">
+                        <i th:id="'status-icon-' + ${app.id}"
+                           th:class="|bi ${latestStatuses.get(app.id) != null && latestStatuses.get(app.id).isUp ? 'bi-check-circle' : 'bi-exclamation-triangle'} me-1|"></i>
+                        <span th:id="'status-text-' + ${app.id}"
+                              th:text="${latestStatuses.get(app.id) != null && latestStatuses.get(app.id).isUp ? 'Healthy' : 'Unhealthy'}">Status</span>
+                    </span>
+                </div>
+
+                <div class="card-body">
+                    <p class="text-muted small mb-2">
+                        <i class="bi bi-tag"></i>
+                        <span th:text="${app.category ?: 'Uncategorized'}">Category</span>
+                    </p>
+
+                    <p class="card-text small text-muted mb-3" th:text="${app.description ?: 'No description provided'}">
+                        Description
+                    </p>
+
+                    <div class="mb-3">
+                        <small class="text-muted d-block">URL:</small>
+                        <a th:href="${app.url}" target="_blank" class="text-decoration-none small text-truncate d-block"
+                           th:text="${app.url}">https://example.com</a>
+                    </div>
+
+                    <div class="row text-center mt-3 g-2">
+                        <div class="col-4">
+                            <div class="p-2 bg-light rounded">
+                                <small class="text-muted d-block">HTTP Code</small>
+                                <strong th:text="${latestStatuses.get(app.id)?.statusCode ?: '---'}">200</strong>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="p-2 bg-light rounded">
+                                <small class="text-muted d-block">Response</small>
+                                <strong th:text="${latestStatuses.get(app.id)?.responseTime ?: '0ms'}">120ms</strong>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="p-2 bg-light rounded">
+                                <small class="text-muted d-block">Last Check</small>
+                                <strong>
+                                    <span th:text="${latestStatuses.get(app.id) != null ? #temporals.format(latestStatuses.get(app.id).checkedAt, 'HH:mm:ss') : '---'}">12:00:00</span>
+                                </strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <small class="text-muted d-block mb-1">Accepted statuses:</small>
+                        <div>
+                            <span th:each="status : ${app.acceptedStatusesList}"
+                                  class="badge bg-secondary me-1"
+                                  th:text="${status}">200</span>
+                        </div>
+                    </div>
+
+                    <div th:if="${latestStatuses.get(app.id) != null && latestStatuses.get(app.id).errorMessage != null}"
+                         class="mt-3 alert alert-danger py-2 small">
+                        <i class="bi bi-exclamation-circle"></i>
+                        <span th:text="${latestStatuses.get(app.id).errorMessage}">Error</span>
+                    </div>
+                </div>
+
+                <div class="card-footer bg-transparent d-flex justify-content-between">
+                    <a th:href="@{/app/{id}(id=${app.id})}" class="btn btn-sm btn-outline-info">
+                        <i class="bi bi-graph-up"></i> Details
+                    </a>
+                    <div>
+                        <form th:action="@{/app/{id}/toggle(id=${app.id})}" method="post" style="display: inline;">
+                            <button type="submit" class="btn btn-sm"
+                                    th:classappend="${app.active} ? 'btn-outline-warning' : 'btn-outline-success'">
+                                <i th:class="${app.active} ? 'bi-pause-circle' : 'bi-play-circle'"></i>
+                                <span th:text="${app.active} ? 'Pause' : 'Resume'"></span>
+                            </button>
+                        </form>
+                        <button class="btn btn-sm btn-outline-danger ms-1"
+                                th:onclick="deleteApp([[${app.id}]], [[${app.name}]])">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div th:if="${#lists.isEmpty(apps)}" class="col-12">
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-inbox" style="font-size: 4rem;"></i>
+                <h4 class="mt-3">No applications yet</h4>
+                <p>Add your first application to start monitoring</p>
+                <a href="/add" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Add Application
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const eventSource = new EventSource('/api/live-status');
+
+    eventSource.onmessage = function(event) {
+        const status = JSON.parse(event.data);
+        updateAppStatus(status);
+        updateLastUpdateTime();
+    };
+
+    function updateAppStatus(status) {
+        const appCard = document.querySelector(`[data-app-id="${status.appId}"]`);
+        if (!appCard) return;
+
+        // Update card border
+        const cardDiv = appCard.querySelector('.app-card');
+        cardDiv.classList.remove('up', 'down');
+        cardDiv.classList.add(status.isUp ? 'up' : 'down');
+
+        // Update status badge & text
+        const badge = document.getElementById(`status-badge-${status.appId}`);
+        const icon = document.getElementById(`status-icon-${status.appId}`);
+        const text = document.getElementById(`status-text-${status.appId}`);
+
+        if(badge) {
+            badge.className = `badge ${status.isUp ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'}`;
+        }
+        if(icon) {
+            icon.className = `bi ${status.isUp ? 'bi-check-circle' : 'bi-exclamation-triangle'} me-1`;
+        }
+        if(text) {
+            text.textContent = status.isUp ? 'Healthy' : 'Unhealthy';
+        }
+
+        // Update metrics (using innerHTML for simplicity in JS update)
+        const metrics = appCard.querySelectorAll('strong');
+        if(metrics.length >= 3) {
+            metrics[0].textContent = status.statusCode;
+            metrics[1].textContent = status.responseTime;
+            metrics[2].textContent = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+
+        appCard.setAttribute('data-status', status.isUp ? 'up' : 'down');
+        updateStats();
+    }
+
+    function updateStats() {
+        const upCount = document.querySelectorAll('[data-status="up"]').length;
+        const downCount = document.querySelectorAll('[data-status="down"]').length;
+        const total = upCount + downCount;
+
+        document.getElementById('onlineCount').textContent = upCount;
+        document.getElementById('offlineCount').textContent = downCount;
+
+        const uptime = total > 0 ? ((upCount / total) * 100).toFixed(1) : 0;
+        document.getElementById('globalUptime').textContent = uptime + '%';
+    }
+
+    function updateLastUpdateTime() {
+        const now = new Date();
+        document.getElementById('lastUpdate').textContent = now.toLocaleString();
+    }
+
+    function filterAll() {
+        document.querySelectorAll('.badge-filter').forEach(btn => btn.classList.remove('active'));
+        event.target.closest('button').classList.add('active');
+        document.querySelectorAll('[data-status]').forEach(el => el.style.display = 'block');
+    }
+
+    function filterUp() {
+        document.querySelectorAll('.badge-filter').forEach(btn => btn.classList.remove('active'));
+        event.target.closest('button').classList.add('active');
+        document.querySelectorAll('[data-status="down"]').forEach(el => el.style.display = 'none');
+        document.querySelectorAll('[data-status="up"]').forEach(el => el.style.display = 'block');
+    }
+
+    function filterDown() {
+        document.querySelectorAll('.badge-filter').forEach(btn => btn.classList.remove('active'));
+        event.target.closest('button').classList.add('active');
+        document.querySelectorAll('[data-status="up"]').forEach(el => el.style.display = 'none');
+        document.querySelectorAll('[data-status="down"]').forEach(el => el.style.display = 'block');
+    }
+
+    function refreshData() {
+        location.reload();
+    }
+
+    function deleteApp(id, name) {
+        if (confirm(`Are you sure you want to delete "${name}"?`)) {
+            fetch(`/app/${id}/delete`, { method: 'POST' })
+                .then(() => location.reload());
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', updateStats);
+    window.addEventListener('beforeunload', () => eventSource.close());
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

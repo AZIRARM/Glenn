@@ -1,0 +1,3 @@
+databaseChangeLog:
+  - include:
+      file: changelog/db/0-init/init-schema.yaml

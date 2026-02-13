@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glenn - Add Application</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        .status-badge {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .status-badge:hover {
+            transform: scale(1.05);
+        }
+        .status-badge.selected {
+            background-color: #0d6efd !important;
+            color: white !important;
+        }
+        .form-section {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid #0d6efd;
+        }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-dark bg-dark">
+    <div class="container-fluid">
+        <a href="/" class="navbar-brand">
+            <i class="bi bi-shield-check"></i>
+            Glenn - Health Monitor
+        </a>
+    </div>
+</nav>
+
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>
+                <i class="bi bi-plus-circle text-primary"></i>
+                Add New Application
+            </h1>
+            <p class="text-muted">Add a new application to monitor its health continuously.</p>
+        </div>
+        <div class="col text-end">
+            <a href="/" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+             <form th:action="@{/apps/save}" method="post" th:object="${monitoredApp}">
+                <!-- Basic Information -->
+                <div class="form-section">
+                    <h5 class="mb-3">
+                        <i class="bi bi-info-circle"></i>
+                        Basic Information
+                    </h5>
+
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Application Name *</label>
+                        <input type="text" class="form-control" id="name" th:field="*{name}"
+                               placeholder="e.g., Production API, Payment Service" required>
+                        <div class="invalid-feedback">Please provide a name.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="category" class="form-label">Category</label>
+                        <input type="text" class="form-control" id="category" th:field="*{category}"
+                               placeholder="e.g., Backend, Frontend, Database" list="categorySuggestions">
+                        <datalist id="categorySuggestions">
+                            <option th:each="cat : ${categories}" th:value="${cat}">
+                        </datalist>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" th:field="*{description}"
+                                  rows="2" placeholder="What does this application do?"></textarea>
+                    </div>
+                </div>
+
+                <!-- URL Configuration -->
+                <div class="form-section">
+                    <h5 class="mb-3">
+                        <i class="bi bi-link"></i>
+                        URL Configuration
+                    </h5>
+
+                    <div class="mb-3">
+                        <label for="url" class="form-label">URL to Monitor *</label>
+                        <input type="url" class="form-control" id="url" th:field="*{url}"
+                               placeholder="https://api.example.com/health" required>
+                        <div class="invalid-feedback">Please provide a valid URL (must start with http:// or https://).</div>
+                        <div class="form-text">The endpoint will be checked every 30 seconds.</div>
+                    </div>
+                </div>
+
+                <!-- Status Codes -->
+                <div class="form-section">
+                    <h5 class="mb-3">
+                        <i class="bi bi-check-circle"></i>
+                        Accepted Status Codes
+                    </h5>
+
+                    <p class="text-muted small">Select which HTTP status codes indicate a healthy application:</p>
+
+                    <div class="row g-2 mb-3" id="statusCodes">
+                        <div th:each="code : ${acceptedStatusOptions}" class="col-auto">
+                                <span class="badge bg-secondary status-badge"
+                                      th:data-code="${code}"
+                                      th:text="${code}"
+                                      onclick="toggleStatus(this)">
+                                </span>
+                        </div>
+                    </div>
+
+                    <!-- Hidden field to store selected statuses -->
+                    <input type="hidden" th:field="*{acceptedStatuses}" id="acceptedStatuses">
+
+                    <div class="alert alert-info small">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Common choices:</strong> 200 (OK), 201 (Created), 301 (Moved Permanently), 302 (Found)
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Add Application
+                </button>
+                <a href="/" class="btn btn-outline-secondary ms-2">Cancel</a>
+            </form>
+        </div>
+
+        <!-- Help Sidebar -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <i class="bi bi-question-circle"></i>
+                    Need Help?
+                </div>
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">What is Glenn?</h6>
+                    <p class="card-text small">
+                        Glenn continuously monitors your applications and alerts you when they're down.
+                        Named after the compassionate healer from <em>Monster Girl Doctor</em>.
+                    </p>
+
+                    <hr>
+
+                    <h6 class="card-subtitle mb-2 text-muted">Status Codes Explained</h6>
+                    <ul class="small">
+                        <li><strong>2xx (Success)</strong> - Application is healthy</li>
+                        <li><strong>3xx (Redirect)</strong> - May be acceptable</li>
+                        <li><strong>4xx (Client Error)</strong> - Usually unhealthy</li>
+                        <li><strong>5xx (Server Error)</strong> - Definitely unhealthy</li>
+                    </ul>
+
+                    <hr>
+
+                    <h6 class="card-subtitle mb-2 text-muted">Tips</h6>
+                    <ul class="small">
+                        <li>Use a specific health endpoint if available</li>
+                        <li>Monitor both production and staging</li>
+                        <li>Add descriptions for team clarity</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Status code selection logic
+    const statusCodes = document.querySelectorAll('.status-badge');
+    const hiddenInput = document.getElementById('acceptedStatuses');
+
+    // Initialize with 200 selected
+    document.querySelectorAll('[data-code="200"]').forEach(el => el.classList.add('selected'));
+
+    function toggleStatus(element) {
+        const code = element.getAttribute('th:data-code') || element.innerText;
+        element.classList.toggle('bg-secondary');
+        element.classList.toggle('bg-success');
+
+        // Récupérer tous les badges "success"
+        const activeCodes = Array.from(document.querySelectorAll('.status-badge.bg-success'))
+                                 .map(el => el.innerText.trim());
+
+        // Mettre à jour le champ caché pour Spring
+        document.getElementById('acceptedStatuses').value = activeCodes.join(',');
+    }
+
+    function updateHiddenInput() {
+        const selected = [];
+        document.querySelectorAll('.status-badge.selected').forEach(el => {
+            selected.push(el.getAttribute('data-code'));
+        });
+        hiddenInput.value = selected.join(',');
+    }
+
+    // Bootstrap form validation
+    (function() {
+        'use strict';
+        const forms = document.querySelectorAll('.needs-validation');
+        Array.from(forms).forEach(form => {
+            form.addEventListener('submit', event => {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            }, false);
+        });
+    })();
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glenn - Application Details</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+        }
+        .uptime-card {
+            transition: all 0.3s;
+            text-align: center;
+            padding: 20px;
+            border-radius: 10px;
+            background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
+        }
+        .uptime-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+        }
+        .uptime-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #0d6efd;
+        }
+        .history-item {
+            border-left: 3px solid transparent;
+            transition: background-color 0.2s;
+        }
+        .history-item:hover {
+            background-color: #f8f9fa;
+        }
+        .history-item.up {
+            border-left-color: #198754;
+        }
+        .history-item.down {
+            border-left-color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-dark bg-dark">
+    <div class="container-fluid">
+        <a href="/" class="navbar-brand">
+            <i class="bi bi-shield-check"></i>
+            Glenn - Health Monitor
+        </a>
+    </div>
+</nav>
+
+<div class="container mt-4" th:with="app=${app}">
+    <!-- Header with navigation -->
+    <div class="row mb-4">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/">Dashboard</a></li>
+                    <li class="breadcrumb-item active" th:text="${app.name}">Application Name</li>
+                </ol>
+            </nav>
+        </div>
+        <div class="col text-end">
+            <form th:action="@{/app/{id}/toggle(id=${app.id})}" method="post" style="display: inline;">
+                <button type="submit" class="btn"
+                        th:classappend="${app.active} ? 'btn-outline-warning' : 'btn-outline-success'">
+                    <i th:class="${app.active} ? 'bi-pause-circle' : 'bi-play-circle'"></i>
+                    <span th:text="${app.active} ? 'Disable' : 'Enable'"></span>
+                </button>
+            </form>
+            <button class="btn btn-outline-danger"
+                    onclick="deleteApp([[${app.id}]], '[[${app.name}]]')">
+                <i class="bi bi-trash"></i> Delete
+            </button>
+        </div>
+    </div>
+
+    <!-- Application Info Card -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">
+                <i class="bi bi-info-circle"></i>
+                Application Information
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <table class="table table-borderless">
+                        <tr>
+                            <th width="150">Name:</th>
+                            <td><strong th:text="${app.name}">App Name</strong></td>
+                        </tr>
+                        <tr>
+                            <th>Category:</th>
+                            <td>
+                                <span class="badge bg-secondary" th:if="${app.category}" th:text="${app.category}">Category</span>
+                                <span class="text-muted" th:unless="${app.category}">Not categorized</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>URL:</th>
+                            <td>
+                                <a th:href="${app.url}" target="_blank" class="text-decoration-none" th:text="${app.url}">https://example.com</a>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <table class="table table-borderless">
+                        <tr>
+                            <th width="150">Status:</th>
+                            <td>
+                                    <span class="badge" th:classappend="${app.active} ? 'bg-success' : 'bg-secondary'">
+                                        <i th:class="${app.active} ? 'bi-check-circle' : 'bi-pause-circle'"></i>
+                                        <span th:text="${app.active} ? 'Active' : 'Paused'"></span>
+                                    </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Accepted Statuses:</th>
+                            <td>
+                                    <span th:each="status : ${app.acceptedStatusesList}"
+                                          class="badge bg-info me-1" th:text="${status}">200</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Created:</th>
+                            <td th:text="${#temporals.format(app.createdAt, 'dd MMM yyyy HH:mm')}">01 Jan 2025 12:00</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            <div th:if="${app.description}" class="mt-2 p-3 bg-light rounded">
+                <i class="bi bi-quote text-muted"></i>
+                <span th:text="${app.description}">Description here</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Uptime Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="uptime-card">
+                <h6 class="text-muted">24h Uptime</h6>
+                <div class="uptime-value" id="uptime24h">99.5%</div>
+                <div class="text-success">
+                    <i class="bi bi-arrow-up"></i> Last 24 hours
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="uptime-card">
+                <h6 class="text-muted">7d Uptime</h6>
+                <div class="uptime-value" id="uptime7d">98.2%</div>
+                <div class="text-success">
+                    <i class="bi bi-calendar-week"></i> Last 7 days
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="uptime-card">
+                <h6 class="text-muted">30d Uptime</h6>
+                <div class="uptime-value" id="uptime30d">99.1%</div>
+                <div class="text-success">
+                    <i class="bi bi-calendar-month"></i> Last 30 days
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="uptime-card">
+                <h6 class="text-muted">Total Checks</h6>
+                <div class="uptime-value" id="totalChecks">2,847</div>
+                <div class="text-muted">
+                    <i class="bi bi-check-circle"></i> Since creation
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Response Time Chart -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="bi bi-graph-up"></i>
+                Response Time (last 24h)
+            </h5>
+        </div>
+        <div class="card-body">
+            <canvas id="responseTimeChart" style="height: 300px;"></canvas>
+        </div>
+    </div>
+
+    <!-- Status History -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="bi bi-clock-history"></i>
+                Status History (last 30 minutes)
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="list-group" id="historyList">
+                <div th:each="check : ${history}"
+                     class="list-group-item history-item d-flex justify-content-between align-items-center"
+                     th:classappend="${check.isUp} ? 'up' : 'down'">
+
+                    <div class="d-flex align-items-center">
+                            <span class="status-indicator"
+                                  th:classappend="${check.isUp} ? 'bg-success' : 'bg-danger'"></span>
+                        <div>
+                            <strong th:text="${check.isUp} ? 'UP' : 'DOWN'"></strong>
+                            <span class="text-muted mx-2">·</span>
+                            <span class="text-muted" th:text="${check.statusCode}">200</span>
+                            <span class="text-muted mx-2">·</span>
+                            <span th:text="${check.responseTime}">120ms</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <small class="text-muted"
+                               th:text="${#temporals.format(check.checkedAt, 'HH:mm:ss')}">
+                            12:00:00
+                        </small>
+                        <span th:if="${check.errorMessage}"
+                              class="badge bg-danger ms-2"
+                              title="Error">
+                                <i class="bi bi-exclamation-triangle"></i>
+                            </span>
+                    </div>
+                </div>
+
+                <div th:if="${#lists.isEmpty(history)}" class="text-center text-muted p-4">
+                    <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+                    <p class="mt-2">No history available yet. Checks will appear soon.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function deleteApp(id, name) {
+        if (confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) {
+            fetch(`/app/${id}/delete`, { method: 'POST' })
+                .then(() => window.location.href = '/');
+        }
+    }
+
+    // Fetch stats from the API
+    fetch(`/app/[[${app.id}]]/stats`)
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('uptime24h').textContent = data.uptime24h.toFixed(1) + '%';
+            document.getElementById('uptime7d').textContent = data.uptime7d.toFixed(1) + '%';
+        });
+
+    // Initialize response time chart
+    const ctx = document.getElementById('responseTimeChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: Array.from({length: 24}, (_, i) => `${i}h`),
+            datasets: [{
+                label: 'Response Time (ms)',
+                data: Array.from({length: 24}, () => Math.floor(Math.random() * 200) + 50),
+                borderColor: '#0d6efd',
+                backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Response Time (ms)'
+                    }
+                }
+            }
+        }
+    });
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

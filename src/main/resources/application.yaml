@@ -1,0 +1,49 @@
+spring:
+  application:
+    name: glenn
+  main:
+    allow-bean-definition-overriding: true
+
+  # 1. Route JDBC pour Liquibase
+  datasource:
+    url: jdbc:postgresql://localhost:5432/glenn_db
+    username: postgres
+    password: ton_password
+    driver-class-name: org.postgresql.Driver
+
+  # 2. Route R2DBC pour ton code réactif
+  r2dbc:
+    url: r2dbc:postgresql://localhost:5432/glenn_db
+    username: postgres
+    password: ton_password
+
+  # 3. Liquibase
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+    enabled: true
+
+  # Désactive l'ancien système de schema.sql
+  sql:
+    init:
+      mode: never
+
+
+  thymeleaf:
+    prefix: classpath:/templates/
+    suffix: .html
+    mode: HTML
+    cache: false
+    check-template-location: true
+
+
+
+  # Configuration WebFlux
+  webflux:
+    base-path: /
+
+# Monitoring configuration
+monitoring:
+  interval: 30000  # 30 secondes en millisecondes
+  timeout: 5000    # Timeout HTTP 5 secondes
+server:
+  port: 1080
