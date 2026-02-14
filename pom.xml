@@ -37,12 +37,14 @@
 			<artifactId>spring-boot-starter-data-r2dbc</artifactId>
 		</dependency>
 
+		<!-- Driver JDBC pour Liquibase (obligatoire) -->
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
 			<scope>runtime</scope>
 		</dependency>
 
+		<!-- Driver R2DBC pour l'application -->
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>r2dbc-postgresql</artifactId>
@@ -52,6 +54,12 @@
 		<dependency>
 			<groupId>org.liquibase</groupId>
 			<artifactId>liquibase-core</artifactId>
+		</dependency>
+
+		<!-- Dépendance optionnelle pour améliorer l'intégration Spring Boot/Liquibase -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-jdbc</artifactId>
 		</dependency>
 
 		<dependency>

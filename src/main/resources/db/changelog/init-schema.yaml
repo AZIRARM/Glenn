@@ -1,0 +1,83 @@
+databaseChangeLog:
+  - changeSet:
+      id: 20260213-001
+      author: azirar
+      changes:
+        # 1. Création de la table pour l'entité MonitoredApp
+        - createTable:
+            tableName: monitored_apps
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: category
+                  type: VARCHAR(100)
+              - column:
+                  name: description
+                  type: TEXT
+              - column:
+                  name: url
+                  type: VARCHAR(500)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: accepted_statuses # Mappe vers acceptedStatuses
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: active
+                  type: BOOLEAN
+                  defaultValueBoolean: true # Défini à true par défaut
+              - column:
+                  name: created_at # Mappe vers createdAt
+                  type: TIMESTAMP
+              - column:
+                  name: updated_at # Mappe vers updatedAt
+                  type: TIMESTAMP
+
+        # 2. Création de la table pour l'entité StatusCheck
+        - createTable:
+            tableName: status_checks
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: app_id # Mappe vers appId
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_status_app
+                    referencedTableName: monitored_apps
+                    referencedColumnNames: id
+              - column:
+                  name: app_name # Mappe vers appName
+                  type: VARCHAR(255)
+              - column:
+                  name: status_code # Mappe vers statusCode
+                  type: INTEGER
+              - column:
+                  name: is_up # Mappe vers isUp
+                  type: BOOLEAN
+              - column:
+                  name: response_time # Mappe vers responseTime
+                  type: VARCHAR(50)
+              - column:
+                  name: error_message # Mappe vers errorMessage
+                  type: TEXT
+              - column:
+                  name: checked_at # Mappe vers checkedAt
+                  type: TIMESTAMP

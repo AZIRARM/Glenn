@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title th:if="${monitoredApp.id == null}">Glenn - Add Application</title>
-    <title th:unless="${monitoredApp.id == null}">Glenn - Edit Application</title>
+    <title>Glenn - Edit Application</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
@@ -13,7 +12,7 @@
             transition: all 0.2s;
             padding: 0.5rem 1rem;
             font-size: 0.9rem;
-            background-color: #6c757d !important;  /* Gris par défaut */
+            background-color: #6c757d !important;
             color: white !important;
         }
         .status-badge:hover {
@@ -21,7 +20,7 @@
             opacity: 0.9;
         }
         .status-badge.selected {
-            background-color: #0d6efd !important;  /* Bleu quand sélectionné */
+            background-color: #0d6efd !important;
             color: white !important;
         }
         .form-section {
@@ -53,22 +52,12 @@
 <div class="container mt-4">
     <div class="row mb-4">
         <div class="col">
-            <!-- Titre dynamique selon le mode -->
-            <h1 th:if="${monitoredApp.id == null}">
-                <i class="bi bi-plus-circle text-primary"></i>
-                Add New Application
-            </h1>
-            <h1 th:unless="${monitoredApp.id == null}">
+            <h1>
                 <i class="bi bi-pencil-square text-warning edit-title"></i>
                 Edit Application
             </h1>
-
-            <!-- Sous-titre dynamique -->
-            <p th:if="${monitoredApp.id == null}" class="text-muted">
-                Add a new application to monitor its health continuously.
-            </p>
-            <p th:unless="${monitoredApp.id == null}" class="text-muted">
-                Update the configuration for <span th:text="${monitoredApp.name}">Application Name</span>.
+            <p class="text-muted">
+                Update configuration for <strong th:text="${monitoredApp.name}">Application Name</strong>.
             </p>
         </div>
         <div class="col text-end">
@@ -80,12 +69,10 @@
 
     <div class="row">
         <div class="col-md-8">
-            <!-- Action dynamique selon le mode -->
-            <form th:if="${monitoredApp.id == null}"
-                  th:action="@{/apps/save}"
-                  method="post"
-                  th:object="${monitoredApp}">
+            <!-- CORRECTION: Action vers /apps/update/{id} au lieu de /apps/save -->
+            <form th:action="@{/apps/save}" th:object="${monitoredApp}" method="post">
 
+                <!-- ID caché -->
                 <input type="hidden" th:field="*{id}" />
 
                 <!-- Basic Information -->
@@ -143,7 +130,7 @@
 
                     <p class="text-muted small">Select which HTTP status codes indicate a healthy application:</p>
 
-                    <!-- Quick selection buttons -->
+                    <!-- Quick selection buttons (AJOUTÉS) -->
                     <div class="mb-3">
                         <button type="button" class="btn btn-sm btn-outline-primary preset-btn" onclick="presetSuccess()">
                             <i class="bi bi-check-circle"></i> 2xx Success
@@ -162,113 +149,7 @@
                     <div class="row g-2 mb-3" id="statusCodes">
                         <div th:each="code : ${acceptedStatusOptions}" class="col-auto">
                             <span class="badge status-badge"
-                                  th:classappend="${#strings.contains(monitoredApp.acceptedStatuses, code)} ? 'selected' : ''"
-                                  th:data-code="${code}"
-                                  th:text="${code}"
-                                  onclick="toggleStatus(this)">
-                            </span>
-                        </div>
-                    </div>
-
-                    <!-- Hidden field to store selected statuses -->
-                    <input type="hidden" th:field="*{acceptedStatuses}" id="acceptedStatuses">
-
-                    <div class="alert alert-info small mt-3">
-                        <i class="bi bi-info-circle"></i>
-                        <strong>Common choices:</strong> 200 (OK), 201 (Created), 204 (No Content), 301 (Moved), 302 (Found)
-                    </div>
-                </div>
-
-                <!-- Bouton de soumission dynamique -->
-                <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-plus-circle"></i> Add Application
-                </button>
-                <a href="/" class="btn btn-outline-secondary ms-2">Cancel</a>
-            </form>
-
-            <!-- Formulaire pour l'édition -->
-            <form th:unless="${monitoredApp.id == null}"
-                  th:action="@{/apps/update/{id}(id=${monitoredApp.id})}"
-                  method="post"
-                  th:object="${monitoredApp}">
-
-                <input type="hidden" th:field="*{id}" />
-
-                <!-- Basic Information -->
-                <div class="form-section">
-                    <h5 class="mb-3">
-                        <i class="bi bi-info-circle"></i>
-                        Basic Information
-                    </h5>
-
-                    <div class="mb-3">
-                        <label for="name" class="form-label">Application Name *</label>
-                        <input type="text" class="form-control" id="name" th:field="*{name}"
-                               placeholder="e.g., Production API, Payment Service" required>
-                        <div class="invalid-feedback">Please provide a name.</div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="category" class="form-label">Category</label>
-                        <input type="text" class="form-control" id="category" th:field="*{category}"
-                               placeholder="e.g., Backend, Frontend, Database" list="categorySuggestions">
-                        <datalist id="categorySuggestions">
-                            <option th:each="cat : ${categories}" th:value="${cat}">
-                        </datalist>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="description" class="form-label">Description</label>
-                        <textarea class="form-control" id="description" th:field="*{description}"
-                                  rows="2" placeholder="What does this application do?"></textarea>
-                    </div>
-                </div>
-
-                <!-- URL Configuration -->
-                <div class="form-section">
-                    <h5 class="mb-3">
-                        <i class="bi bi-link"></i>
-                        URL Configuration
-                    </h5>
-
-                    <div class="mb-3">
-                        <label for="url" class="form-label">URL to Monitor *</label>
-                        <input type="url" class="form-control" id="url" th:field="*{url}"
-                               placeholder="https://api.example.com/health" required>
-                        <div class="invalid-feedback">Please provide a valid URL (must start with http:// or https://).</div>
-                        <div class="form-text">The endpoint will be checked every 30 seconds.</div>
-                    </div>
-                </div>
-
-                <!-- Status Codes -->
-                <div class="form-section">
-                    <h5 class="mb-3">
-                        <i class="bi bi-check-circle"></i>
-                        Accepted Status Codes
-                    </h5>
-
-                    <p class="text-muted small">Select which HTTP status codes indicate a healthy application:</p>
-
-                    <!-- Quick selection buttons -->
-                    <div class="mb-3">
-                        <button type="button" class="btn btn-sm btn-outline-primary preset-btn" onclick="presetSuccess()">
-                            <i class="bi bi-check-circle"></i> 2xx Success
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-primary preset-btn" onclick="presetRedirect()">
-                            <i class="bi bi-arrow-repeat"></i> 3xx Redirect
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-success preset-btn" onclick="presetDefault()">
-                            <i class="bi bi-star"></i> Default
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary preset-btn" onclick="clearAll()">
-                            <i class="bi bi-eraser"></i> Clear all
-                        </button>
-                    </div>
-
-                    <div class="row g-2 mb-3" id="statusCodes">
-                        <div th:each="code : ${acceptedStatusOptions}" class="col-auto">
-                            <span class="badge status-badge"
-                                  th:classappend="${#strings.contains(monitoredApp.acceptedStatuses, code)} ? 'selected' : ''"
+                                  th:classappend="${monitoredApp.acceptedStatuses != null && #strings.contains(monitoredApp.acceptedStatuses, code.toString())} ? 'selected' : ''"
                                   th:data-code="${code}"
                                   th:text="${code}"
                                   onclick="toggleStatus(this)">
@@ -284,13 +165,13 @@
                         <strong>Common choices:</strong> 200 (OK), 201 (Created), 204 (No Content), 301 (Moved), 302 (Found)
                     </div>
 
-                    <!-- Affichage de l'ID pour l'édition (optionnel) -->
+                    <!-- Affichage de l'ID (optionnel) -->
                     <div class="small text-muted mt-2">
                         <i class="bi bi-hash"></i> Application ID: <span th:text="${monitoredApp.id}"></span>
                     </div>
                 </div>
 
-                <!-- Bouton de soumission dynamique -->
+                <!-- Bouton de soumission -->
                 <button type="submit" class="btn btn-warning">
                     <i class="bi bi-pencil-square"></i> Update Application
                 </button>
@@ -298,7 +179,7 @@
             </form>
         </div>
 
-        <!-- Help Sidebar (identique pour les deux modes) -->
+        <!-- Help Sidebar -->
         <div class="col-md-4">
             <div class="card">
                 <div class="card-header bg-info text-white">
@@ -342,8 +223,7 @@
 
     // Initialisation
     document.addEventListener('DOMContentLoaded', function() {
-        // Les badges sont déjà initialisés par Thymeleaf avec la classe 'selected'
-        // Mais on s'assure que le champ caché est à jour
+        // S'assurer que le champ caché est à jour avec les badges sélectionnés
         updateHiddenInput();
     });
 
@@ -365,24 +245,6 @@
         });
         hiddenInput.value = selected.join(',');
         console.log('Selected codes:', hiddenInput.value); // Pour debug
-    }
-
-    function updateBadgesFromHidden() {
-        // Réinitialiser toutes les sélections
-        document.querySelectorAll('.status-badge').forEach(el => {
-            el.classList.remove('selected');
-        });
-
-        // Sélectionner ceux qui sont dans le champ caché
-        if (hiddenInput.value) {
-            const selectedCodes = hiddenInput.value.split(',');
-            document.querySelectorAll('.status-badge').forEach(el => {
-                const code = el.getAttribute('data-code');
-                if (selectedCodes.includes(code)) {
-                    el.classList.add('selected');
-                }
-            });
-        }
     }
 
     // Preset: 2xx Success codes
@@ -433,21 +295,6 @@
         });
         updateHiddenInput();
     }
-
-    // Bootstrap form validation
-    (function() {
-        'use strict';
-        const forms = document.querySelectorAll('.needs-validation');
-        Array.from(forms).forEach(form => {
-            form.addEventListener('submit', event => {
-                if (!form.checkValidity()) {
-                    event.preventDefault();
-                    event.stopPropagation();
-                }
-                form.classList.add('was-validated');
-            }, false);
-        });
-    })();
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

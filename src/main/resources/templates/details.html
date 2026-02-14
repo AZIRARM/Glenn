@@ -44,6 +44,10 @@
         .history-item.down {
             border-left-color: #dc3545;
         }
+        .no-data {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 <body>
@@ -56,7 +60,7 @@
     </div>
 </nav>
 
-<div class="container mt-4" th:with="app=${app}">
+<div class="container mt-4" th:with="app=${app}, stats=${stats}">
     <!-- Header with navigation -->
     <div class="row mb-4">
         <div class="col">
@@ -68,6 +72,9 @@
             </nav>
         </div>
         <div class="col text-end">
+            <a th:href="@{/app-form(id=${app.id})}" class="btn btn-outline-primary me-2">
+                <i class="bi bi-pencil"></i> Edit
+            </a>
             <form th:action="@{/app/{id}/toggle(id=${app.id})}" method="post" style="display: inline;">
                 <button type="submit" class="btn"
                         th:classappend="${app.active} ? 'btn-outline-warning' : 'btn-outline-success'">
@@ -118,22 +125,22 @@
                         <tr>
                             <th width="150">Status:</th>
                             <td>
-                                    <span class="badge" th:classappend="${app.active} ? 'bg-success' : 'bg-secondary'">
-                                        <i th:class="${app.active} ? 'bi-check-circle' : 'bi-pause-circle'"></i>
-                                        <span th:text="${app.active} ? 'Active' : 'Paused'"></span>
-                                    </span>
+                                <span class="badge" th:classappend="${app.active} ? 'bg-success' : 'bg-secondary'">
+                                    <i th:class="${app.active} ? 'bi-check-circle' : 'bi-pause-circle'"></i>
+                                    <span th:text="${app.active} ? 'Active' : 'Paused'"></span>
+                                </span>
                             </td>
                         </tr>
                         <tr>
                             <th>Accepted Statuses:</th>
                             <td>
-                                    <span th:each="status : ${app.acceptedStatusesList}"
-                                          class="badge bg-info me-1" th:text="${status}">200</span>
+                                <span th:each="status : ${app.acceptedStatusesList}"
+                                      class="badge bg-info me-1" th:text="${status}">200</span>
                             </td>
                         </tr>
                         <tr>
                             <th>Created:</th>
-                            <td th:text="${#temporals.format(app.createdAt, 'dd MMM yyyy HH:mm')}">01 Jan 2025 12:00</td>
+                            <td th:text="${app.createdAt != null ? #temporals.format(app.createdAt, 'dd MMM yyyy HH:mm') : 'Unknown'}">01 Jan 2025 12:00</td>
                         </tr>
                     </table>
                 </div>
@@ -145,39 +152,41 @@
         </div>
     </div>
 
-    <!-- Uptime Stats -->
-    <div class="row mb-4">
+    <!-- Stats Cards -->
+    <div class="row mb-4" th:if="${stats.totalChecks > 0}">
         <div class="col-md-3">
             <div class="uptime-card">
-                <h6 class="text-muted">24h Uptime</h6>
-                <div class="uptime-value" id="uptime24h">99.5%</div>
+                <h6 class="text-muted">Success Rate</h6>
+                <div class="uptime-value" th:text="${stats.successRate + '%'}">99.5%</div>
                 <div class="text-success">
-                    <i class="bi bi-arrow-up"></i> Last 24 hours
+                    <i class="bi bi-check-circle"></i> Last <span th:text="${stats.totalChecks}">30</span> checks
                 </div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="uptime-card">
-                <h6 class="text-muted">7d Uptime</h6>
-                <div class="uptime-value" id="uptime7d">98.2%</div>
-                <div class="text-success">
-                    <i class="bi bi-calendar-week"></i> Last 7 days
+                <h6 class="text-muted">Avg Response</h6>
+                <div class="uptime-value" th:text="${stats.avgResponseTime}">120ms</div>
+                <div class="text-info">
+                    <i class="bi bi-clock"></i> Average time
                 </div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="uptime-card">
-                <h6 class="text-muted">30d Uptime</h6>
-                <div class="uptime-value" id="uptime30d">99.1%</div>
-                <div class="text-success">
-                    <i class="bi bi-calendar-month"></i> Last 30 days
+                <h6 class="text-muted">Last Status</h6>
+                <div class="uptime-value" style="font-size: 1.8rem;"
+                     th:text="${stats.lastStatus}"
+                     th:classappend="${stats.lastStatus == 'UP' ? 'text-success' : 'text-danger'}">UP</div>
+                <div class="text-muted">
+                    <i class="bi bi-clock-history"></i> <span th:text="${stats.lastTime}">12:00:00</span>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="uptime-card">
                 <h6 class="text-muted">Total Checks</h6>
-                <div class="uptime-value" id="totalChecks">2,847</div>
+                <div class="uptime-value" th:text="${stats.totalChecks}">2,847</div>
                 <div class="text-muted">
                     <i class="bi bi-check-circle"></i> Since creation
                 </div>
@@ -185,16 +194,26 @@
         </div>
     </div>
 
+    <!-- Message when no stats -->
+    <div class="row mb-4" th:if="${stats.totalChecks == 0}">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i>
+                No statistics available yet. Statistics will appear after the first health checks.
+            </div>
+        </div>
+    </div>
+
     <!-- Response Time Chart -->
-    <div class="card mb-4">
+    <div class="card mb-4" th:if="${stats.totalChecks > 0}">
         <div class="card-header">
             <h5 class="mb-0">
                 <i class="bi bi-graph-up"></i>
-                Response Time (last 24h)
+                Response Time History (last 20 checks)
             </h5>
         </div>
         <div class="card-body">
-            <canvas id="responseTimeChart" style="height: 300px;"></canvas>
+            <canvas id="responseTimeChart" style="height: 300px; width: 100%;"></canvas>
         </div>
     </div>
 
@@ -203,7 +222,7 @@
         <div class="card-header">
             <h5 class="mb-0">
                 <i class="bi bi-clock-history"></i>
-                Status History (last 30 minutes)
+                Status History (last 30 checks)
             </h5>
         </div>
         <div class="card-body">
@@ -213,8 +232,8 @@
                      th:classappend="${check.isUp} ? 'up' : 'down'">
 
                     <div class="d-flex align-items-center">
-                            <span class="status-indicator"
-                                  th:classappend="${check.isUp} ? 'bg-success' : 'bg-danger'"></span>
+                        <span class="status-indicator"
+                              th:classappend="${check.isUp} ? 'bg-success' : 'bg-danger'"></span>
                         <div>
                             <strong th:text="${check.isUp} ? 'UP' : 'DOWN'"></strong>
                             <span class="text-muted mx-2">·</span>
@@ -226,27 +245,22 @@
 
                     <div>
                         <small class="text-muted"
-                               th:text="${#temporals.format(check.checkedAt, 'HH:mm:ss')}">
+                               th:text="${check.checkedAt != null ? #temporals.format(check.checkedAt, 'HH:mm:ss') : 'Unknown'}">
                             12:00:00
                         </small>
                         <span th:if="${check.errorMessage}"
                               class="badge bg-danger ms-2"
-                              title="Error">
-                                <i class="bi bi-exclamation-triangle"></i>
-                            </span>
+                              th:title="${check.errorMessage}">
+                            <i class="bi bi-exclamation-triangle"></i>
+                        </span>
                     </div>
-                </div>
-
-                <div th:if="${#lists.isEmpty(history)}" class="text-center text-muted p-4">
-                    <i class="bi bi-inbox" style="font-size: 2rem;"></i>
-                    <p class="mt-2">No history available yet. Checks will appear soon.</p>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<script>
+<script th:inline="javascript">
     function deleteApp(id, name) {
         if (confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) {
             fetch(`/app/${id}/delete`, { method: 'POST' })
@@ -254,46 +268,89 @@
         }
     }
 
-    // Fetch stats from the API
-    fetch(`/app/[[${app.id}]]/stats`)
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById('uptime24h').textContent = data.uptime24h.toFixed(1) + '%';
-            document.getElementById('uptime7d').textContent = data.uptime7d.toFixed(1) + '%';
-        });
+    // Get chart data from stats
+    document.addEventListener('DOMContentLoaded', function() {
+        const stats = /*[[${stats}]]*/ null;
 
-    // Initialize response time chart
-    const ctx = document.getElementById('responseTimeChart').getContext('2d');
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: Array.from({length: 24}, (_, i) => `${i}h`),
-            datasets: [{
-                label: 'Response Time (ms)',
-                data: Array.from({length: 24}, () => Math.floor(Math.random() * 200) + 50),
-                borderColor: '#0d6efd',
-                backgroundColor: 'rgba(13, 110, 253, 0.1)',
-                tension: 0.4,
-                fill: true
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Response Time (ms)'
+        if (stats && stats.chartChecks && stats.chartChecks.length > 0) {
+            const chartChecks = stats.chartChecks.reverse(); // Plus ancien au plus récent
+
+            // Extraire les temps de réponse
+            const responseTimes = chartChecks.map(check => {
+                if (check.responseTime) {
+                    const match = check.responseTime.match(/(\d+)/);
+                    if (match) {
+                        const val = parseInt(match[1]);
+                        return val > 5000 ? 5000 : val;
                     }
                 }
+                return 0;
+            });
+
+            // Créer les labels
+            const labels = chartChecks.map(check => {
+                if (check.checkedAt) {
+                    const date = new Date(check.checkedAt);
+                    return date.getHours().toString().padStart(2, '0') + ':' +
+                           date.getMinutes().toString().padStart(2, '0');
+                }
+                return 'N/A';
+            });
+
+            // Créer le graphique
+            const ctx = document.getElementById('responseTimeChart').getContext('2d');
+
+            if (window.myChart) {
+                window.myChart.destroy();
             }
+
+            window.myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Response Time (ms)',
+                        data: responseTimes,
+                        borderColor: '#0d6efd',
+                        backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        pointBackgroundColor: chartChecks.map(check => {
+                            return check.isUp ? '#198754' : '#dc3545';
+                        }),
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointRadius: 5,
+                        pointHoverRadius: 7
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const check = chartChecks[context.dataIndex];
+                                    return [
+                                        `Response: ${context.raw}ms`,
+                                        `Status: ${check.statusCode}`,
+                                        `Health: ${check.isUp ? 'UP' : 'DOWN'}`
+                                    ];
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 5000,
+                            title: { display: true, text: 'Response Time (ms)' }
+                        }
+                    }
+                }
+            });
         }
     });
 </script>

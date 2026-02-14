@@ -53,6 +53,46 @@
             background-color: #0d6efd !important;
             color: white !important;
         }
+        .category-badge {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .category-badge:hover {
+            opacity: 0.8;
+            transform: scale(1.05);
+        }
+        .category-badge.active-filter {
+            background-color: #0d6efd !important;
+            color: white !important;
+            box-shadow: 0 2px 8px rgba(13,110,253,0.3);
+        }
+        .filter-indicator {
+            display: none;
+            margin-bottom: 15px;
+        }
+        .filter-indicator.active {
+            display: block;
+        }
+        .btn-all-categories {
+            margin-right: 10px;
+        }
+        .footer-buttons {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+        .left-buttons {
+            display: flex;
+            gap: 5px;
+        }
+        .right-buttons {
+            display: flex;
+            gap: 5px;
+        }
+        .card-footer {
+            padding: 0.75rem 1rem;
+        }
     </style>
 </head>
 <body>
@@ -63,7 +103,7 @@
                 Glenn - Health Monitor
                 <small class="ms-2 fs-6 text-white-50">
                     <i class="bi bi-heart-pulse"></i>
-                    Named after the healer from Monster Girl Doctor
+                    Your applications in good health
                 </small>
             </span>
         <span class="text-white-50">
@@ -121,8 +161,24 @@
         </div>
     </div>
 
-    <div class="row mb-4">
-        <div class="col">
+    <!-- Indicateur de filtre actif -->
+    <div class="filter-indicator alert alert-info d-flex justify-content-between align-items-center" id="filterIndicator">
+        <div>
+            <i class="bi bi-funnel-fill"></i>
+            Filtering by category: <strong id="activeCategory">All</strong>
+        </div>
+        <div>
+            <button class="btn btn-sm btn-outline-primary" onclick="showAllCategories()">
+                <i class="bi bi-x-circle"></i> Clear filter
+            </button>
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col d-flex align-items-center">
+            <button class="btn btn-outline-primary me-2 btn-all-categories" onclick="showAllCategories()">
+                <i class="bi bi-grid"></i> All Categories
+            </button>
             <div class="btn-group" role="group">
                 <button class="btn btn-outline-primary badge-filter active" onclick="filterAll()">
                     <i class="bi bi-list-ul"></i> All
@@ -136,7 +192,7 @@
             </div>
         </div>
         <div class="col text-end">
-            <a href="/add" class="btn btn-primary">
+            <a href="/app/add" class="btn btn-primary">
                 <i class="bi bi-plus-circle"></i>
                 Add Application
             </a>
@@ -148,9 +204,20 @@
         </div>
     </div>
 
+    <!-- Compteur de résultats -->
+    <div class="row mb-2" th:if="${not #lists.isEmpty(apps)}">
+        <div class="col">
+            <small class="text-muted" id="resultCount">
+                Showing <span id="visibleCount">0</span> of <span id="totalCount" th:text="${#lists.size(apps)}">0</span> applications
+            </small>
+        </div>
+    </div>
+
     <div class="row" id="apps-container">
-        <div th:each="app : ${apps}" class="col-xl-4 col-md-6 mb-4"
-             th:data-status="${latestStatuses.get(app.id) != null && latestStatuses.get(app.id).isUp ? 'up' : 'down'}">
+        <div th:each="app : ${apps}" class="col-xl-4 col-md-6 mb-4 app-item"
+             th:data-status="${latestStatuses.get(app.id) != null && latestStatuses.get(app.id).isUp ? 'up' : 'down'}"
+             th:data-category="${app.category ?: 'Uncategorized'}"
+             th:data-app-id="${app.id}">
 
             <div class="card h-100 app-card"
                  th:classappend="${latestStatuses.get(app.id) != null && latestStatuses.get(app.id).isUp ? 'up' : 'down'}">
@@ -168,9 +235,15 @@
                 </div>
 
                 <div class="card-body">
+                    <!-- Le badge de catégorie est cliquable -->
                     <p class="text-muted small mb-2">
                         <i class="bi bi-tag"></i>
-                        <span th:text="${app.category ?: 'Uncategorized'}">Category</span>
+                        <span class="badge bg-secondary category-badge"
+                              th:text="${app.category ?: 'Uncategorized'}"
+                              th:data-category="${app.category ?: 'Uncategorized'}"
+                              onclick="filterByCategory(this.getAttribute('data-category'))"
+                              style="cursor: pointer; font-size: 0.9rem;">
+                        </span>
                     </p>
 
                     <p class="card-text small text-muted mb-3" th:text="${app.description ?: 'No description provided'}">
@@ -222,41 +295,67 @@
                     </div>
                 </div>
 
-                <div class="card-footer bg-transparent d-flex justify-content-between">
-                    <a th:href="@{/app/{id}(id=${app.id})}" class="btn btn-sm btn-outline-info">
-                        <i class="bi bi-graph-up"></i> Details
-                    </a>
-                    <div>
-                        <form th:action="@{/app/{id}/toggle(id=${app.id})}" method="post" style="display: inline;">
-                            <button type="submit" class="btn btn-sm"
-                                    th:classappend="${app.active} ? 'btn-outline-warning' : 'btn-outline-success'">
-                                <i th:class="${app.active} ? 'bi-pause-circle' : 'bi-play-circle'"></i>
-                                <span th:text="${app.active} ? 'Pause' : 'Resume'"></span>
+                <div class="card-footer bg-transparent">
+                    <div class="footer-buttons">
+                        <div class="left-buttons">
+                            <!-- Le crayon est maintenant à côté de Details -->
+                            <a th:href="@{/app/{id}(id=${app.id})}" class="btn btn-sm btn-outline-info">
+                                <i class="bi bi-graph-up"></i> Details
+                            </a>
+                            <a th:href="@{/app/edit/{id}(id=${app.id})}" class="btn btn-sm btn-outline-primary" title="Edit application">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                        </div>
+                        <div class="right-buttons">
+                            <form th:action="@{/app/{id}/toggle(id=${app.id})}" method="post" style="display: inline;">
+                                <button type="submit" class="btn btn-sm"
+                                        th:classappend="${app.active} ? 'btn-outline-warning' : 'btn-outline-success'">
+                                    <i th:class="${app.active} ? 'bi-pause-circle' : 'bi-play-circle'"></i>
+                                    <span th:text="${app.active} ? 'Pause' : 'Resume'"></span>
+                                </button>
+                            </form>
+                            <button class="btn btn-sm btn-outline-danger"
+                                    th:onclick="deleteApp([[${app.id}]], [[${app.name}]])">
+                                <i class="bi bi-trash"></i>
                             </button>
-                        </form>
-                        <button class="btn btn-sm btn-outline-danger ms-1"
-                                th:onclick="deleteApp([[${app.id}]], [[${app.name}]])">
-                            <i class="bi bi-trash"></i>
-                        </button>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
+        <!-- Message quand aucune application -->
         <div th:if="${#lists.isEmpty(apps)}" class="col-12">
             <div class="text-center text-muted py-5">
                 <i class="bi bi-inbox" style="font-size: 4rem;"></i>
                 <h4 class="mt-3">No applications yet</h4>
                 <p>Add your first application to start monitoring</p>
-                <a href="/add" class="btn btn-primary">
+                <a href="/app/add" class="btn btn-primary">
                     <i class="bi bi-plus-circle"></i> Add Application
                 </a>
+            </div>
+        </div>
+
+        <!-- Message quand aucun résultat après filtrage -->
+        <div th:if="${not #lists.isEmpty(apps)}" class="col-12" id="noResultsMessage" style="display: none;">
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-search" style="font-size: 4rem;"></i>
+                <h4 class="mt-3">No applications match your filters</h4>
+                <p>Try adjusting your filter criteria</p>
+                <button class="btn btn-primary" onclick="clearAllFilters()">
+                    <i class="bi bi-eraser"></i> Clear all filters
+                </button>
             </div>
         </div>
     </div>
 </div>
 
 <script>
+    // État des filtres
+    let currentStatusFilter = 'all';
+    let currentCategoryFilter = 'all';
+
+    // EventSource pour les mises à jour en direct
     const eventSource = new EventSource('/api/live-status');
 
     eventSource.onmessage = function(event) {
@@ -266,13 +365,12 @@
     };
 
     function updateAppStatus(status) {
-        const appCard = document.querySelector(`[data-app-id="${status.appId}"]`);
-        if (!appCard) return;
+        const appItem = document.querySelector(`.app-item[data-app-id="${status.appId}"]`);
+        if (!appItem) return;
 
-        // Update card border
-        const cardDiv = appCard.querySelector('.app-card');
-        cardDiv.classList.remove('up', 'down');
-        cardDiv.classList.add(status.isUp ? 'up' : 'down');
+        const appCard = appItem.querySelector('.app-card');
+        appCard.classList.remove('up', 'down');
+        appCard.classList.add(status.isUp ? 'up' : 'down');
 
         // Update status badge & text
         const badge = document.getElementById(`status-badge-${status.appId}`);
@@ -289,53 +387,171 @@
             text.textContent = status.isUp ? 'Healthy' : 'Unhealthy';
         }
 
-        // Update metrics (using innerHTML for simplicity in JS update)
+        // Update metrics
         const metrics = appCard.querySelectorAll('strong');
         if(metrics.length >= 3) {
             metrics[0].textContent = status.statusCode;
-            metrics[1].textContent = status.responseTime;
+            metrics[1].textContent = status.responseTime + 'ms';
             metrics[2].textContent = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         }
 
-        appCard.setAttribute('data-status', status.isUp ? 'up' : 'down');
+        appItem.setAttribute('data-status', status.isUp ? 'up' : 'down');
         updateStats();
+        applyFilters();
+    }
+
+    function filterByCategory(category) {
+        currentCategoryFilter = category;
+
+        // Mettre à jour l'indicateur visuel
+        document.getElementById('activeCategory').textContent = category;
+        document.getElementById('filterIndicator').classList.add('active');
+
+        // Enlever la classe active-filter de tous les badges
+        document.querySelectorAll('.category-badge').forEach(badge => {
+            badge.classList.remove('active-filter');
+        });
+
+        // Ajouter la classe active-filter aux badges de cette catégorie
+        document.querySelectorAll(`.category-badge[data-category="${category}"]`).forEach(badge => {
+            badge.classList.add('active-filter');
+        });
+
+        applyFilters();
+    }
+
+    function showAllCategories() {
+        currentCategoryFilter = 'all';
+
+        // Cacher l'indicateur
+        document.getElementById('filterIndicator').classList.remove('active');
+
+        // Enlever la classe active-filter de tous les badges
+        document.querySelectorAll('.category-badge').forEach(badge => {
+            badge.classList.remove('active-filter');
+        });
+
+        applyFilters();
+    }
+
+    function filterUp() {
+        currentStatusFilter = 'up';
+        document.querySelectorAll('.badge-filter').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        // Trouver et activer le bouton Healthy
+        document.querySelectorAll('.badge-filter').forEach(btn => {
+            if(btn.textContent.includes('Healthy')) {
+                btn.classList.add('active');
+            }
+        });
+        applyFilters();
+    }
+
+    function filterDown() {
+        currentStatusFilter = 'down';
+        document.querySelectorAll('.badge-filter').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        // Trouver et activer le bouton Unhealthy
+        document.querySelectorAll('.badge-filter').forEach(btn => {
+            if(btn.textContent.includes('Unhealthy')) {
+                btn.classList.add('active');
+            }
+        });
+        applyFilters();
+    }
+
+    function filterAll() {
+        currentStatusFilter = 'all';
+        document.querySelectorAll('.badge-filter').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        // Trouver et activer le bouton All
+        document.querySelectorAll('.badge-filter').forEach(btn => {
+            if(btn.textContent.includes('All')) {
+                btn.classList.add('active');
+            }
+        });
+        applyFilters();
+    }
+
+    function applyFilters() {
+        const appItems = document.querySelectorAll('.app-item');
+        let visibleCount = 0;
+
+        appItems.forEach(item => {
+            const status = item.getAttribute('data-status');
+            const category = item.getAttribute('data-category');
+
+            let statusMatch = currentStatusFilter === 'all' || status === currentStatusFilter;
+            let categoryMatch = currentCategoryFilter === 'all' || category === currentCategoryFilter;
+
+            if (statusMatch && categoryMatch) {
+                item.style.display = 'block';
+                visibleCount++;
+            } else {
+                item.style.display = 'none';
+            }
+        });
+
+        // Mettre à jour le compteur si des apps existent
+        if (appItems.length > 0) {
+            document.getElementById('visibleCount').textContent = visibleCount;
+
+            // Afficher/masquer le message "aucun résultat"
+            const noResultsMsg = document.getElementById('noResultsMessage');
+            if (visibleCount === 0) {
+                noResultsMsg.style.display = 'block';
+            } else {
+                noResultsMsg.style.display = 'none';
+            }
+        }
+    }
+
+    function clearAllFilters() {
+        currentStatusFilter = 'all';
+        currentCategoryFilter = 'all';
+
+        // Reset status buttons
+        document.querySelectorAll('.badge-filter').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        // Activer le bouton All
+        document.querySelectorAll('.badge-filter').forEach(btn => {
+            if(btn.textContent.includes('All')) {
+                btn.classList.add('active');
+            }
+        });
+
+        // Reset category filter
+        showAllCategories();
+
+        applyFilters();
     }
 
     function updateStats() {
+        const appItems = document.querySelectorAll('.app-item');
+        if (appItems.length === 0) return;
+
         const upCount = document.querySelectorAll('[data-status="up"]').length;
         const downCount = document.querySelectorAll('[data-status="down"]').length;
         const total = upCount + downCount;
 
         document.getElementById('onlineCount').textContent = upCount;
         document.getElementById('offlineCount').textContent = downCount;
+        document.getElementById('totalApps').textContent = total;
 
         const uptime = total > 0 ? ((upCount / total) * 100).toFixed(1) : 0;
         document.getElementById('globalUptime').textContent = uptime + '%';
+
+        // Mettre à jour le compteur total
+        document.getElementById('totalCount').textContent = total;
     }
 
     function updateLastUpdateTime() {
         const now = new Date();
         document.getElementById('lastUpdate').textContent = now.toLocaleString();
-    }
-
-    function filterAll() {
-        document.querySelectorAll('.badge-filter').forEach(btn => btn.classList.remove('active'));
-        event.target.closest('button').classList.add('active');
-        document.querySelectorAll('[data-status]').forEach(el => el.style.display = 'block');
-    }
-
-    function filterUp() {
-        document.querySelectorAll('.badge-filter').forEach(btn => btn.classList.remove('active'));
-        event.target.closest('button').classList.add('active');
-        document.querySelectorAll('[data-status="down"]').forEach(el => el.style.display = 'none');
-        document.querySelectorAll('[data-status="up"]').forEach(el => el.style.display = 'block');
-    }
-
-    function filterDown() {
-        document.querySelectorAll('.badge-filter').forEach(btn => btn.classList.remove('active'));
-        event.target.closest('button').classList.add('active');
-        document.querySelectorAll('[data-status="up"]').forEach(el => el.style.display = 'none');
-        document.querySelectorAll('[data-status="down"]').forEach(el => el.style.display = 'block');
     }
 
     function refreshData() {
@@ -349,7 +565,12 @@
         }
     }
 
-    document.addEventListener('DOMContentLoaded', updateStats);
+    // Initialisation
+    document.addEventListener('DOMContentLoaded', function() {
+        updateStats();
+        applyFilters();
+    });
+
     window.addEventListener('beforeunload', () => eventSource.close());
 </script>
 

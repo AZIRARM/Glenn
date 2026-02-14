@@ -6,27 +6,35 @@ spring:
 
   # 1. Route JDBC pour Liquibase
   datasource:
-    url: jdbc:postgresql://localhost:5432/glenn_db
-    username: postgres
-    password: ton_password
+    jdbc-url: ${POSTGRES_URL:jdbc}  # Valeur par défaut ajoutée
+    username: ${POSTGRES_USERNAME}
+    password: ${POSTGRES_PWD}
     driver-class-name: org.postgresql.Driver
+    hikari:  # Configuration optionnelle du pool de connexions JDBC
+      maximum-pool-size: 2
 
   # 2. Route R2DBC pour ton code réactif
   r2dbc:
-    url: r2dbc:postgresql://localhost:5432/glenn_db
-    username: postgres
-    password: ton_password
+    url: ${POSTGRES_REACTIVE_URL}  # Format r2dbc:
+    username: ${POSTGRES_USERNAME}
+    password: ${POSTGRES_PWD}
+    pool:  # Configuration optionnelle du pool R2DBC
+      max-size: 10
+      initial-size: 5
 
   # 3. Liquibase
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
+    default-schema: glenn
     enabled: true
+    # Ajout de ces propriétés pour faciliter le debug
+    drop-first: false  # Ne pas dropper la base au démarrage
+    contexts: production
 
   # Désactive l'ancien système de schema.sql
   sql:
     init:
       mode: never
-
 
   thymeleaf:
     prefix: classpath:/templates/
@@ -34,8 +42,6 @@ spring:
     mode: HTML
     cache: false
     check-template-location: true
-
-
 
   # Configuration WebFlux
   webflux:
@@ -45,5 +51,13 @@ spring:
 monitoring:
   interval: 30000  # 30 secondes en millisecondes
   timeout: 5000    # Timeout HTTP 5 secondes
+
 server:
   port: 1080
+
+# Logging pour debugger Liquibase
+logging:
+  level:
+    liquibase: ERROR
+    org.springframework.jdbc: ERROR
+    org.springframework.r2dbc: ERROR
