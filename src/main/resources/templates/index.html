@@ -98,21 +98,26 @@
 <body>
 <nav class="navbar navbar-dark bg-dark">
     <div class="container-fluid">
-            <span class="navbar-brand mb-0 h1">
-                <i class="bi bi-shield-check"></i>
-                Glenn - Health Monitor
-                <small class="ms-2 fs-6 text-white-50">
-                    <i class="bi bi-heart-pulse"></i>
-                    Your applications in good health
-                </small>
-            </span>
-        <span class="text-white-50">
+        <span class="navbar-brand mb-0 h1">
+            <i class="bi bi-shield-check"></i>
+            Glenn - Health Monitor
+            <small class="ms-2 fs-6 text-white-50">
+                <i class="bi bi-heart-pulse"></i>
+                Your applications in good health
+            </small>
+        </span>
+        <div>
+            <!-- AJOUT DE L'ICONE D'AGRANDISSEMENT POUR LA VUE SUPERVISION -->
+            <a href="/supervision" class="btn btn-outline-light btn-sm me-2" title="Supervision View (Full screen mode)">
+                <i class="bi bi-arrows-fullscreen"></i> Supervision
+            </a>
+            <span class="text-white-50">
                 <i class="bi bi-clock"></i>
                 <span id="lastUpdate" th:text="${currentTime}"></span>
             </span>
+        </div>
     </div>
 </nav>
-
 <div class="container mt-4">
     <div class="row mb-4">
         <div class="col-md-3">

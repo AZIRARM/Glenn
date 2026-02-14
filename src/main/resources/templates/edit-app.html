@@ -69,8 +69,8 @@
 
     <div class="row">
         <div class="col-md-8">
-            <!-- CORRECTION: Action vers /apps/update/{id} au lieu de /apps/save -->
-            <form th:action="@{/apps/save}" th:object="${monitoredApp}" method="post">
+            <!-- CORRECTION: Action vers /apps/update/{id} au lieu de /app/save -->
+            <form th:action="@{/app/save}" th:object="${monitoredApp}" method="post">
 
                 <!-- ID caché -->
                 <input type="hidden" th:field="*{id}" />
@@ -276,7 +276,7 @@
 
     // Preset: Default (200,201,202,204,301,302,304)
     function presetDefault() {
-        const defaultCodes = ['200', '201', '202', '204', '301', '302', '304'];
+        const defaultCodes = ['200', '201', '202', '203', '204', '205', '206'];
         document.querySelectorAll('.status-badge').forEach(el => {
             const code = el.getAttribute('data-code');
             if (defaultCodes.includes(code)) {

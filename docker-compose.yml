@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: glenn-postgres
+    environment:
+      POSTGRES_DB: glenn
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - glenn-network
+
+  glenn-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: glenn-app:latest
+    container_name: glenn-app
+    ports:
+      - "1080:1080"
+    environment:
+      # JDBC URL for Liquibase
+      POSTGRES_URL: jdbc:postgresql://postgres:5432/glenn
+      # R2DBC URL for reactive app
+      POSTGRES_REACTIVE_URL: r2dbc:postgresql://postgres:5432/glenn
+      POSTGRES_USERNAME: postgres
+      POSTGRES_PWD: postgres
+      MONITORING_INTERVAL: 30000
+      MONITORING_TIMEOUT: 5000
+      MONITORING_HISTORY: 10000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - glenn-network
+    restart: unless-stopped
+    # Optional: add healthcheck for the app
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:1080"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres-data:
+    name: glenn-postgres-data
+
+networks:
+  glenn-network:
+    name: glenn-network
+    driver: bridge

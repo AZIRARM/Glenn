@@ -119,7 +119,7 @@ public class MonitoringService {
     }
 
     public Flux<StatusCheck> getAppHistory(Long appId) {
-        return statusRepository.findTop10ByAppIdOrderByCheckedAtDesc(appId);
+        return statusRepository.findTop100ByAppIdOrderByCheckedAtDesc(appId);
     }
 
     public Mono<Double> getUptimePercentage(Long appId, int hours) {

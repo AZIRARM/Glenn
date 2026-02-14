@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glenn - Supervision View</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        body {
+            background-color: #000000;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .navbar {
+            background-color: #1a1a1a !important;
+            border-bottom: 1px solid #333;
+        }
+
+        .supervision-container {
+            padding: 20px;
+        }
+
+        .app-tile {
+            background-color: #1a1a1a;
+            border-radius: 12px;
+            padding: 20px;
+            height: 100%;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 2px solid;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .app-tile:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+        }
+
+        .app-tile.up {
+            border-color: #00ff00;
+            box-shadow: 0 0 20px rgba(0,255,0,0.2);
+        }
+
+        .app-tile.down {
+            border-color: #ff0000;
+            box-shadow: 0 0 20px rgba(255,0,0,0.2);
+        }
+
+        .app-tile::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, transparent, currentColor, transparent);
+            opacity: 0.5;
+        }
+
+        .app-tile.up::before {
+            color: #00ff00;
+        }
+
+        .app-tile.down::before {
+            color: #ff0000;
+        }
+
+        .app-name {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #ffffff;
+        }
+
+        .app-description {
+            color: #b0b0b0;
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+            line-height: 1.4;
+        }
+
+        .status-badge-simple {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-top: 10px;
+        }
+
+        .status-badge-simple.up {
+            background-color: rgba(0,255,0,0.2);
+            color: #00ff00;
+            border: 1px solid #00ff00;
+        }
+
+        .status-badge-simple.down {
+            background-color: rgba(255,0,0,0.2);
+            color: #ff0000;
+            border: 1px solid #ff0000;
+        }
+
+        .category-tag {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 0.7rem;
+            color: #888;
+            background-color: #333;
+            padding: 2px 8px;
+            border-radius: 12px;
+        }
+
+        .stats-bar {
+            background-color: #1a1a1a;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid #333;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        .stat-label {
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        .stat-value.up { color: #00ff00; }
+        .stat-value.down { color: #ff0000; }
+        .stat-value.total { color: #0d6efd; }
+
+        .btn-supervision {
+            background-color: #333;
+            color: white;
+            border: 1px solid #555;
+            padding: 8px 16px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .btn-supervision:hover {
+            background-color: #444;
+            color: white;
+            border-color: #777;
+        }
+
+        .btn-supervision.active {
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+        }
+
+        .filter-section {
+            background-color: #1a1a1a;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid #333;
+        }
+
+        .filter-btn {
+            background-color: #333;
+            color: #ccc;
+            border: none;
+            padding: 6px 12px;
+            margin: 0 5px 5px 0;
+            border-radius: 20px;
+            transition: all 0.2s;
+        }
+
+        .filter-btn:hover {
+            background-color: #444;
+            color: white;
+        }
+
+        .filter-btn.active {
+            background-color: #0d6efd;
+            color: white;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 50px;
+            color: #666;
+        }
+
+        .back-link {
+            color: #0d6efd;
+            text-decoration: none;
+            font-size: 1.1rem;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-dark">
+    <div class="container-fluid">
+        <span class="navbar-brand mb-0 h1">
+            <i class="bi bi-shield-check"></i>
+            Glenn - Supervision View
+        </span>
+        <div>
+            <span class="text-white-50 me-3">
+                <i class="bi bi-clock"></i>
+                <span id="lastUpdate" th:text="${currentTime}"></span>
+            </span>
+            <a href="/" class="btn btn-outline-light btn-sm">
+                <i class="bi bi-arrow-left"></i> Dashboard
+            </a>
+        </div>
+    </div>
+</nav>
+
+<div class="container-fluid supervision-container">
+    <!-- Statistics Bar -->
+    <div class="stats-bar">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="stat-item">
+                    <div class="stat-value total" id="totalApps" th:text="${#lists.size(apps)}">0</div>
+                    <div class="stat-label">Total Applications</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-item">
+                    <div class="stat-value up" id="onlineCount">0</div>
+                    <div class="stat-label">Healthy</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-item">
+                    <div class="stat-value down" id="offlineCount">0</div>
+                    <div class="stat-label">Unhealthy</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-item">
+                    <div class="stat-value" style="color: #ffc107;" id="globalUptime">0%</div>
+                    <div class="stat-label">Global Uptime</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="filter-section">
+        <div class="row">
+            <div class="col-md-6">
+                <strong>Filter by status:</strong>
+                <button class="filter-btn active" onclick="filterByStatus('all')">All</button>
+                <button class="filter-btn" onclick="filterByStatus('up')">Healthy</button>
+                <button class="filter-btn" onclick="filterByStatus('down')">Unhealthy</button>
+            </div>
+            <div class="col-md-6 text-end">
+                <strong>Quick actions:</strong>
+                <button class="filter-btn" onclick="refreshData()">
+                    <i class="bi bi-arrow-repeat"></i> Refresh
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Applications Grid -->
+    <div class="row" id="apps-container">
+        <div th:each="app : ${apps}" class="col-xl-3 col-lg-4 col-md-6 mb-4 app-item"
+             th:data-status="${latestStatuses.get(app.id) != null && latestStatuses.get(app.id).isUp ? 'up' : 'down'}"
+             th:data-app-id="${app.id}">
+
+            <div class="app-tile" th:classappend="${latestStatuses.get(app.id) != null && latestStatuses.get(app.id).isUp ? 'up' : 'down'}">
+                <span class="category-tag" th:text="${app.category ?: 'Uncategorized'}">Category</span>
+
+                <div class="app-name" th:text="${app.name}">Application Name</div>
+
+                <div class="app-description" th:text="${app.description ?: 'No description provided'}">
+                    Description of the application goes here
+                </div>
+
+                <div th:if="${latestStatuses.get(app.id) != null}" class="mt-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-white-50">
+                            <i class="bi bi-hash"></i> <span th:text="${latestStatuses.get(app.id).statusCode}">200</span>
+                        </small>
+                        <small class="text-white-50">
+                            <i class="bi bi-stopwatch"></i> <span th:text="${latestStatuses.get(app.id).responseTime}">120ms</span>
+                        </small>
+                    </div>
+                </div>
+
+                <div class="status-badge-simple"
+                     th:classappend="${latestStatuses.get(app.id) != null && latestStatuses.get(app.id).isUp ? 'up' : 'down'}"
+                     th:text="${latestStatuses.get(app.id) != null && latestStatuses.get(app.id).isUp ? '● Healthy' : '○ Unhealthy'}">
+                    Status
+                </div>
+            </div>
+        </div>
+
+        <!-- No applications message -->
+        <div th:if="${#lists.isEmpty(apps)}" class="col-12">
+            <div class="no-data">
+                <i class="bi bi-inbox" style="font-size: 4rem;"></i>
+                <h4 class="mt-3">No applications yet</h4>
+                <p>Add your first application to start monitoring</p>
+                <a href="/app/add" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Add Application
+                </a>
+            </div>
+        </div>
+
+        <!-- No results message -->
+        <div th:if="${not #lists.isEmpty(apps)}" class="col-12" id="noResultsMessage" style="display: none;">
+            <div class="no-data">
+                <i class="bi bi-search" style="font-size: 4rem;"></i>
+                <h4 class="mt-3">No applications match your filters</h4>
+                <button class="btn btn-primary" onclick="filterByStatus('all')">
+                    <i class="bi bi-eraser"></i> Show all
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // État du filtre
+    let currentStatusFilter = 'all';
+
+    // EventSource pour les mises à jour en direct
+    const eventSource = new EventSource('/api/live-status');
+
+    eventSource.onmessage = function(event) {
+        const status = JSON.parse(event.data);
+        updateAppStatus(status);
+        updateLastUpdateTime();
+    };
+
+    function updateAppStatus(status) {
+        const appItem = document.querySelector(`.app-item[data-app-id="${status.appId}"]`);
+        if (!appItem) return;
+
+        const appTile = appItem.querySelector('.app-tile');
+        appTile.classList.remove('up', 'down');
+        appTile.classList.add(status.isUp ? 'up' : 'down');
+
+        // Update status badge
+        const statusBadge = appTile.querySelector('.status-badge-simple');
+        statusBadge.className = `status-badge-simple ${status.isUp ? 'up' : 'down'}`;
+        statusBadge.textContent = status.isUp ? '● Healthy' : '○ Unhealthy';
+
+        // Update metrics
+        const metrics = appTile.querySelectorAll('small');
+        if (metrics.length >= 2) {
+            metrics[0].innerHTML = `<i class="bi bi-hash"></i> ${status.statusCode}`;
+            metrics[1].innerHTML = `<i class="bi bi-stopwatch"></i> ${status.responseTime}`;
+        }
+
+        appItem.setAttribute('data-status', status.isUp ? 'up' : 'down');
+        updateStats();
+        applyFilter();
+    }
+
+    function filterByStatus(status) {
+        currentStatusFilter = status;
+
+        // Update active button
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        event.target.classList.add('active');
+
+        applyFilter();
+    }
+
+    function applyFilter() {
+        const appItems = document.querySelectorAll('.app-item');
+        let visibleCount = 0;
+
+        appItems.forEach(item => {
+            const status = item.getAttribute('data-status');
+            const matches = currentStatusFilter === 'all' || status === currentStatusFilter;
+
+            if (matches) {
+                item.style.display = 'block';
+                visibleCount++;
+            } else {
+                item.style.display = 'none';
+            }
+        });
+
+        // Show/hide no results message
+        const noResultsMsg = document.getElementById('noResultsMessage');
+        if (appItems.length > 0 && noResultsMsg) {
+            noResultsMsg.style.display = visibleCount === 0 ? 'block' : 'none';
+        }
+    }
+
+    function updateStats() {
+        const appItems = document.querySelectorAll('.app-item');
+        if (appItems.length === 0) return;
+
+        const upCount = document.querySelectorAll('[data-status="up"]').length;
+        const downCount = document.querySelectorAll('[data-status="down"]').length;
+        const total = upCount + downCount;
+
+        document.getElementById('onlineCount').textContent = upCount;
+        document.getElementById('offlineCount').textContent = downCount;
+        document.getElementById('totalApps').textContent = total;
+
+        const uptime = total > 0 ? ((upCount / total) * 100).toFixed(1) : 0;
+        document.getElementById('globalUptime').textContent = uptime + '%';
+    }
+
+    function updateLastUpdateTime() {
+        const now = new Date();
+        document.getElementById('lastUpdate').textContent = now.toLocaleString();
+    }
+
+    function refreshData() {
+        location.reload();
+    }
+
+    // Initialisation
+    document.addEventListener('DOMContentLoaded', function() {
+        updateStats();
+        applyFilter();
+    });
+
+    window.addEventListener('beforeunload', () => eventSource.close());
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -51,6 +51,7 @@ spring:
 monitoring:
   interval: 30000  # 30 secondes en millisecondes
   timeout: 5000    # Timeout HTTP 5 secondes
+  history: 5000    # history to keep in db
 
 server:
   port: 1080

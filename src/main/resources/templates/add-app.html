@@ -82,7 +82,7 @@
         <div class="col-md-8">
             <!-- Action dynamique selon le mode -->
             <form th:if="${monitoredApp.id == null}"
-                  th:action="@{/apps/save}"
+                  th:action="@{/app/save}"
                   method="post"
                   th:object="${monitoredApp}">
 
@@ -414,7 +414,7 @@
 
     // Preset: Default (200,201,202,204,301,302,304)
     function presetDefault() {
-        const defaultCodes = ['200', '201', '202', '204', '301', '302', '304'];
+        const defaultCodes = ['200', '201', '202', '203', '204', '205', '206'];
         document.querySelectorAll('.status-badge').forEach(el => {
             const code = el.getAttribute('data-code');
             if (defaultCodes.includes(code)) {
