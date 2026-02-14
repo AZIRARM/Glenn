@@ -59,6 +59,11 @@ server:
 # Logging pour debugger Liquibase
 logging:
   level:
+    root: INFO
+    org.azirar.glenn: INFO
     liquibase: ERROR
     org.springframework.jdbc: ERROR
     org.springframework.r2dbc: ERROR
+    reactor.netty: ERROR
+    io.netty: ERROR
+    reactor.netty.http.client: ERROR

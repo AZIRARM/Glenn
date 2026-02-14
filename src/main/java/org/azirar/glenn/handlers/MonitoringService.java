@@ -84,8 +84,6 @@ public class MonitoringService {
                     long duration = System.currentTimeMillis() - startTime;
                     int statusCode = response.statusCode().value();
 
-                    // CORRECTION ICI : Vérifie si le code HTTP est dans la liste des statuts acceptés
-                    // Si oui, l'app est UP, sinon DOWN
                     boolean isUp = app.getAcceptedStatusesList().contains(statusCode);
 
                     log.debug("App {} - Code: {} - Accepted: {} - isUp: {}",
@@ -96,10 +94,58 @@ public class MonitoringService {
                 .timeout(Duration.ofSeconds(5))
                 .onErrorResume(e -> {
                     long duration = System.currentTimeMillis() - startTime;
-                    // En cas d'erreur (timeout, connexion refusée, etc.), c'est DOWN
-                    log.warn("Health check failed for {}: {}", app.getName(), e.getMessage());
-                    return Mono.just(buildStatus(app, 0, false, duration, e.getMessage()));
+
+                    // Récupérer seulement le message d'erreur sans la stacktrace
+                    String errorMessage = formatErrorMessage(e);
+
+                    // Log simplifié sans stacktrace
+                    log.warn("❌ Health check failed for {}: {}", app.getName(), errorMessage);
+
+                    return Mono.just(buildStatus(app, 0, false, duration, errorMessage));
                 });
+    }
+
+    private String formatErrorMessage(Throwable e) {
+        if (e == null) return "Unknown error";
+
+        String msg = e.getMessage();
+        String className = e.getClass().getSimpleName();
+
+        // Mapping des erreurs courantes vers des messages lisibles
+        if (e instanceof javax.net.ssl.SSLHandshakeException) {
+            if (msg != null && msg.contains("unrecognized_name")) {
+                return "SSL Error: Server name not recognized (SNI issue)";
+            }
+            return "SSL Handshake failed: " + (msg != null ? msg : "Unknown SSL error");
+        }
+        else if (e instanceof java.util.concurrent.TimeoutException) {
+            return "Connection timeout after 5 seconds";
+        }
+        else if (e instanceof io.netty.channel.ConnectTimeoutException) {
+            return "Connection timeout: Server unreachable";
+        }
+        else if (className.contains("ConnectException") ||
+                (msg != null && msg.contains("Connection refused"))) {
+            return "Connection refused: Server is down or port closed";
+        }
+        else if (e instanceof org.springframework.web.reactive.function.client.WebClientRequestException) {
+            // Extraire la cause racine si possible
+            Throwable cause = e.getCause();
+            if (cause != null) {
+                String causeMsg = cause.getMessage();
+                if (causeMsg != null && causeMsg.contains("Connection refused")) {
+                    return "Connection refused: Server is down or port closed";
+                }
+                return "Request failed: " + causeMsg;
+            }
+            return "Request failed: " + (msg != null ? msg : "Unknown request error");
+        }
+        else if (e instanceof java.net.ConnectException) {
+            return "Connection refused: " + (msg != null ? msg : "Server unreachable");
+        }
+
+        // Pour toutes les autres erreurs, prendre juste le message ou le nom de la classe
+        return "Error: " + (msg != null ? msg : className);
     }
 
     private StatusCheck buildStatus(MonitoredApp app, int code, boolean isUp, long ms, String error) {
