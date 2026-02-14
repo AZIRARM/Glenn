@@ -16,10 +16,11 @@
         .navbar {
             background-color: #1a1a1a !important;
             border-bottom: 1px solid #333;
+            padding: 0.5rem 1rem; /* Hauteur réduite */
         }
 
         .supervision-container {
-            padding: 20px;
+            padding: 15px; /* Réduit de 20px à 15px */
         }
 
         .app-tile {
@@ -112,13 +113,26 @@
             background-color: #333;
             padding: 2px 8px;
             border-radius: 12px;
+            cursor: pointer; /* Ajouté pour indiquer que c'est cliquable */
+            transition: all 0.2s;
+        }
+
+        .category-tag:hover {
+            background-color: #0d6efd;
+            color: white;
+        }
+
+        .category-tag.active-filter {
+            background-color: #0d6efd;
+            color: white;
+            box-shadow: 0 0 10px rgba(13,110,253,0.5);
         }
 
         .stats-bar {
             background-color: #1a1a1a;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 20px;
+            border-radius: 6px; /* Réduit de 8px à 6px */
+            padding: 10px; /* Réduit de 15px à 10px */
+            margin-bottom: 15px; /* Réduit de 20px à 15px */
             border: 1px solid #333;
         }
 
@@ -127,13 +141,13 @@
         }
 
         .stat-value {
-            font-size: 2rem;
+            font-size: 1.6rem; /* Réduit de 2rem à 1.6rem */
             font-weight: bold;
         }
 
         .stat-label {
             color: #888;
-            font-size: 0.9rem;
+            font-size: 0.8rem; /* Réduit de 0.9rem à 0.8rem */
         }
 
         .stat-value.up { color: #00ff00; }
@@ -144,7 +158,7 @@
             background-color: #333;
             color: white;
             border: 1px solid #555;
-            padding: 8px 16px;
+            padding: 6px 12px; /* Réduit de 8px 16px à 6px 12px */
             border-radius: 6px;
             transition: all 0.2s;
         }
@@ -162,9 +176,9 @@
 
         .filter-section {
             background-color: #1a1a1a;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 20px;
+            border-radius: 6px; /* Réduit de 8px à 6px */
+            padding: 10px; /* Réduit de 15px à 10px */
+            margin-bottom: 15px; /* Réduit de 20px à 15px */
             border: 1px solid #333;
         }
 
@@ -172,10 +186,11 @@
             background-color: #333;
             color: #ccc;
             border: none;
-            padding: 6px 12px;
-            margin: 0 5px 5px 0;
+            padding: 4px 10px; /* Réduit de 6px 12px à 4px 10px */
+            margin: 0 3px 3px 0; /* Réduit les marges */
             border-radius: 20px;
             transition: all 0.2s;
+            font-size: 0.85rem; /* Police plus petite */
         }
 
         .filter-btn:hover {
@@ -186,6 +201,19 @@
         .filter-btn.active {
             background-color: #0d6efd;
             color: white;
+        }
+
+        .filter-indicator {
+            background-color: #1a3a4a;
+            border-left: 4px solid #0d6efd;
+            padding: 5px 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            display: none;
+        }
+
+        .filter-indicator.active {
+            display: block;
         }
 
         .no-data {
@@ -208,12 +236,12 @@
 <body>
 <nav class="navbar navbar-dark">
     <div class="container-fluid">
-        <span class="navbar-brand mb-0 h1">
+        <span class="navbar-brand mb-0 h1" style="font-size: 1.2rem;"> <!-- Police réduite -->
             <i class="bi bi-shield-check"></i>
             Glenn - Supervision View
         </span>
         <div>
-            <span class="text-white-50 me-3">
+            <span class="text-white-50 me-3" style="font-size: 0.9rem;"> <!-- Police réduite -->
                 <i class="bi bi-clock"></i>
                 <span id="lastUpdate" th:text="${currentTime}"></span>
             </span>
@@ -225,13 +253,13 @@
 </nav>
 
 <div class="container-fluid supervision-container">
-    <!-- Statistics Bar -->
+    <!-- Statistics Bar - Hauteur réduite -->
     <div class="stats-bar">
         <div class="row">
             <div class="col-md-3">
                 <div class="stat-item">
                     <div class="stat-value total" id="totalApps" th:text="${#lists.size(apps)}">0</div>
-                    <div class="stat-label">Total Applications</div>
+                    <div class="stat-label">Total</div> <!-- Texte plus court -->
                 </div>
             </div>
             <div class="col-md-3">
@@ -248,24 +276,54 @@
             </div>
             <div class="col-md-3">
                 <div class="stat-item">
-                    <div class="stat-value" style="color: #ffc107;" id="globalUptime">0%</div>
-                    <div class="stat-label">Global Uptime</div>
+                    <div class="stat-value" style="color: #ffc075;" id="globalUptime">0%</div> <!-- Couleur légèrement ajustée -->
+                    <div class="stat-label">Uptime</div> <!-- Texte plus court -->
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Filter Section -->
+    <!-- Indicateur de filtre catégorie actif -->
+    <div class="filter-indicator" id="filterIndicator">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <i class="bi bi-funnel-fill text-info"></i>
+                Filtering by category: <strong id="activeCategory">All</strong>
+            </div>
+            <button class="btn btn-sm btn-outline-info" onclick="showAllCategories()" style="padding: 2px 8px;">
+                <i class="bi bi-x-circle"></i> Clear
+            </button>
+        </div>
+    </div>
+
+    <!-- Filter Section - Plus compacte -->
     <div class="filter-section">
-        <div class="row">
-            <div class="col-md-6">
-                <strong>Filter by status:</strong>
+        <div class="row align-items-center">
+            <div class="col-md-4">
+                <span class="text-white-50 me-2" style="font-size: 0.9rem;">Status:</span>
                 <button class="filter-btn active" onclick="filterByStatus('all')">All</button>
                 <button class="filter-btn" onclick="filterByStatus('up')">Healthy</button>
                 <button class="filter-btn" onclick="filterByStatus('down')">Unhealthy</button>
             </div>
-            <div class="col-md-6 text-end">
-                <strong>Quick actions:</strong>
+            <div class="col-md-5">
+                <span class="text-white-50 me-2" style="font-size: 0.9rem;">Category:</span>
+                <button class="filter-btn" onclick="showAllCategories()">All</button>
+                <!-- Catégories générées dynamiquement -->
+                <span th:each="cat : ${categories}" th:if="${cat != null and cat != ''}">
+                    <button class="filter-btn category-filter"
+                            th:text="${cat}"
+                            th:data-category="${cat}"
+                            onclick="filterByCategory(this.getAttribute('data-category'))">
+                    </button>
+                </span>
+                <!-- Catégorie Uncategorized -->
+                <button class="filter-btn category-filter"
+                        data-category="Uncategorized"
+                        onclick="filterByCategory('Uncategorized')">
+                    Uncategorized
+                </button>
+            </div>
+            <div class="col-md-3 text-end">
                 <button class="filter-btn" onclick="refreshData()">
                     <i class="bi bi-arrow-repeat"></i> Refresh
                 </button>
@@ -277,10 +335,16 @@
     <div class="row" id="apps-container">
         <div th:each="app : ${apps}" class="col-xl-3 col-lg-4 col-md-6 mb-4 app-item"
              th:data-status="${latestStatuses.get(app.id) != null && latestStatuses.get(app.id).isUp ? 'up' : 'down'}"
+             th:data-category="${app.category ?: 'Uncategorized'}"
              th:data-app-id="${app.id}">
 
             <div class="app-tile" th:classappend="${latestStatuses.get(app.id) != null && latestStatuses.get(app.id).isUp ? 'up' : 'down'}">
-                <span class="category-tag" th:text="${app.category ?: 'Uncategorized'}">Category</span>
+                <!-- Category tag cliquable -->
+                <span class="category-tag category-filter"
+                      th:text="${app.category ?: 'Uncategorized'}"
+                      th:data-category="${app.category ?: 'Uncategorized'}"
+                      onclick="filterByCategory(this.getAttribute('data-category'))">
+                </span>
 
                 <div class="app-name" th:text="${app.name}">Application Name</div>
 
@@ -324,7 +388,7 @@
             <div class="no-data">
                 <i class="bi bi-search" style="font-size: 4rem;"></i>
                 <h4 class="mt-3">No applications match your filters</h4>
-                <button class="btn btn-primary" onclick="filterByStatus('all')">
+                <button class="btn btn-primary" onclick="clearAllFilters()">
                     <i class="bi bi-eraser"></i> Show all
                 </button>
             </div>
@@ -333,8 +397,9 @@
 </div>
 
 <script>
-    // État du filtre
+    // État des filtres
     let currentStatusFilter = 'all';
+    let currentCategoryFilter = 'all';
 
     // EventSource pour les mises à jour en direct
     const eventSource = new EventSource('/api/live-status');
@@ -367,7 +432,7 @@
 
         appItem.setAttribute('data-status', status.isUp ? 'up' : 'down');
         updateStats();
-        applyFilter();
+        applyFilters();
     }
 
     function filterByStatus(status) {
@@ -379,18 +444,55 @@
         });
         event.target.classList.add('active');
 
-        applyFilter();
+        applyFilters();
     }
 
-    function applyFilter() {
+    function filterByCategory(category) {
+        currentCategoryFilter = category;
+
+        // Mettre à jour l'indicateur visuel
+        document.getElementById('activeCategory').textContent = category;
+        document.getElementById('filterIndicator').classList.add('active');
+
+        // Enlever la classe active-filter de tous les tags
+        document.querySelectorAll('.category-tag, .category-filter').forEach(el => {
+            el.classList.remove('active-filter');
+        });
+
+        // Ajouter la classe active-filter aux éléments de cette catégorie
+        document.querySelectorAll(`[data-category="${category}"]`).forEach(el => {
+            el.classList.add('active-filter');
+        });
+
+        applyFilters();
+    }
+
+    function showAllCategories() {
+        currentCategoryFilter = 'all';
+
+        // Cacher l'indicateur
+        document.getElementById('filterIndicator').classList.remove('active');
+
+        // Enlever la classe active-filter de tous les tags
+        document.querySelectorAll('.category-tag, .category-filter').forEach(el => {
+            el.classList.remove('active-filter');
+        });
+
+        applyFilters();
+    }
+
+    function applyFilters() {
         const appItems = document.querySelectorAll('.app-item');
         let visibleCount = 0;
 
         appItems.forEach(item => {
             const status = item.getAttribute('data-status');
-            const matches = currentStatusFilter === 'all' || status === currentStatusFilter;
+            const category = item.getAttribute('data-category');
 
-            if (matches) {
+            let statusMatch = currentStatusFilter === 'all' || status === currentStatusFilter;
+            let categoryMatch = currentCategoryFilter === 'all' || category === currentCategoryFilter;
+
+            if (statusMatch && categoryMatch) {
                 item.style.display = 'block';
                 visibleCount++;
             } else {
@@ -398,11 +500,30 @@
             }
         });
 
+        // Mettre à jour le compteur (optionnel, via l'attribut title par exemple)
         // Show/hide no results message
         const noResultsMsg = document.getElementById('noResultsMessage');
         if (appItems.length > 0 && noResultsMsg) {
             noResultsMsg.style.display = visibleCount === 0 ? 'block' : 'none';
         }
+    }
+
+    function clearAllFilters() {
+        currentStatusFilter = 'all';
+        currentCategoryFilter = 'all';
+
+        // Reset status buttons
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.textContent.includes('All') && !btn.hasAttribute('data-category')) {
+                btn.classList.add('active');
+            }
+        });
+
+        // Reset category filter
+        showAllCategories();
+
+        applyFilters();
     }
 
     function updateStats() {
@@ -433,7 +554,7 @@
     // Initialisation
     document.addEventListener('DOMContentLoaded', function() {
         updateStats();
-        applyFilter();
+        applyFilters();
     });
 
     window.addEventListener('beforeunload', () => eventSource.close());

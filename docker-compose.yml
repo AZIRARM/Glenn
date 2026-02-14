@@ -24,8 +24,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: glenn-app:latest
-    container_name: glenn-app
+    image: azirar/glenn:latest
+    container_name: glenn
     ports:
       - "1080:1080"
     environment:
@@ -37,7 +37,7 @@ services:
       POSTGRES_PWD: postgres
       MONITORING_INTERVAL: 30000
       MONITORING_TIMEOUT: 5000
-      MONITORING_HISTORY: 10000
+      MONITORING_HISTORY: 5000
     depends_on:
       postgres:
         condition: service_healthy

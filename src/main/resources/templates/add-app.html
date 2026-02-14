@@ -13,7 +13,7 @@
             transition: all 0.2s;
             padding: 0.5rem 1rem;
             font-size: 0.9rem;
-            background-color: #6c757d !important;  /* Gris par défaut */
+            background-color: #6c757d !important;
             color: white !important;
         }
         .status-badge:hover {
@@ -21,7 +21,7 @@
             opacity: 0.9;
         }
         .status-badge.selected {
-            background-color: #0d6efd !important;  /* Bleu quand sélectionné */
+            background-color: #0d6efd !important;
             color: white !important;
         }
         .form-section {
@@ -37,6 +37,37 @@
         }
         .edit-title {
             color: #ffc107;
+        }
+        .protocol-badge {
+            display: inline-block;
+            font-size: 0.8rem;
+            padding: 4px 10px;
+            border-radius: 20px;
+            color: white;
+            margin-right: 5px;
+        }
+        .protocol-badge.http {
+            background-color: #0d6efd;
+        }
+        .protocol-badge.stream {
+            background-color: #198754;
+        }
+        .protocol-badge.unknown {
+            background-color: #dc3545;
+        }
+        #url.valid {
+            border-color: #198754;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%23198754' d='M2.3 6.73L.6 4.53c-.4-1.04.46-1.4 1.1-.8l1.1 1.4 3.4-3.8c.6-.63 1.6-.27 1.2.7l-4 4.6c-.43.5-.8.4-1.1.1z'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right calc(0.375em + 0.1875rem) center;
+            background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+        }
+        .stream-indicator {
+            background-color: #e8f5e9;
+            border-left: 4px solid #198754;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
         }
     </style>
 </head>
@@ -80,9 +111,8 @@
 
     <div class="row">
         <div class="col-md-8">
-            <!-- Action dynamique selon le mode -->
-            <form th:if="${monitoredApp.id == null}"
-                  th:action="@{/app/save}"
+            <!-- Formulaire unique pour ajout/édition -->
+            <form th:action="@{${monitoredApp.id == null} ? '/app/save' : '/apps/update/' + ${monitoredApp.id}}"
                   method="post"
                   th:object="${monitoredApp}">
 
@@ -122,20 +152,39 @@
                 <div class="form-section">
                     <h5 class="mb-3">
                         <i class="bi bi-link"></i>
-                        URL Configuration
+                        URL / Connection String
                     </h5>
 
                     <div class="mb-3">
-                        <label for="url" class="form-label">URL to Monitor *</label>
-                        <input type="url" class="form-control" id="url" th:field="*{url}"
-                               placeholder="https://api.example.com/health" required>
-                        <div class="invalid-feedback">Please provide a valid URL (must start with http:// or https://).</div>
-                        <div class="form-text">The endpoint will be checked every 30 seconds.</div>
+                        <label for="url" class="form-label">Connection URL *</label>
+                        <input type="text" class="form-control" id="url" th:field="*{url}"
+                               placeholder="https://api.example.com/health or postgresql://localhost:5432/db"
+                               required
+                               oninput="detectProtocol()">
+
+                        <!-- Indicateur de protocole -->
+                        <div id="protocol-info" class="mt-2">
+                            <span id="protocol-badge" class="protocol-badge"></span>
+                            <small id="protocol-message" class="text-muted"></small>
+                        </div>
+
+                        <!-- Message explicatif selon le type -->
+                        <div id="stream-info" class="stream-indicator" style="display: none;">
+                            <i class="bi bi-database"></i>
+                            <strong>Stream connection detected</strong> - We'll check if the port is open and responsive.
+                            HTTP status codes don't apply.
+                        </div>
+
+                        <div class="form-text" id="url-help">
+                            <strong>HTTP/HTTPS:</strong> http:// or https://<br>
+                            <strong>Streams:</strong> postgresql://, mysql://, mongodb://, ssh://, redis://, amqp://
+                        </div>
+                        <div id="url-feedback" class="invalid-feedback"></div>
                     </div>
                 </div>
 
-                <!-- Status Codes -->
-                <div class="form-section">
+                <!-- Status Codes - Hidden for streams -->
+                <div id="status-codes-section" class="form-section">
                     <h5 class="mb-3">
                         <i class="bi bi-check-circle"></i>
                         Accepted Status Codes
@@ -172,133 +221,18 @@
 
                     <!-- Hidden field to store selected statuses -->
                     <input type="hidden" th:field="*{acceptedStatuses}" id="acceptedStatuses">
-
-                    <div class="alert alert-info small mt-3">
-                        <i class="bi bi-info-circle"></i>
-                        <strong>Common choices:</strong> 200 (OK), 201 (Created), 204 (No Content), 301 (Moved), 302 (Found)
-                    </div>
                 </div>
 
                 <!-- Bouton de soumission dynamique -->
-                <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-plus-circle"></i> Add Application
-                </button>
-                <a href="/" class="btn btn-outline-secondary ms-2">Cancel</a>
-            </form>
-
-            <!-- Formulaire pour l'édition -->
-            <form th:unless="${monitoredApp.id == null}"
-                  th:action="@{/apps/update/{id}(id=${monitoredApp.id})}"
-                  method="post"
-                  th:object="${monitoredApp}">
-
-                <input type="hidden" th:field="*{id}" />
-
-                <!-- Basic Information -->
-                <div class="form-section">
-                    <h5 class="mb-3">
-                        <i class="bi bi-info-circle"></i>
-                        Basic Information
-                    </h5>
-
-                    <div class="mb-3">
-                        <label for="name" class="form-label">Application Name *</label>
-                        <input type="text" class="form-control" id="name" th:field="*{name}"
-                               placeholder="e.g., Production API, Payment Service" required>
-                        <div class="invalid-feedback">Please provide a name.</div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="category" class="form-label">Category</label>
-                        <input type="text" class="form-control" id="category" th:field="*{category}"
-                               placeholder="e.g., Backend, Frontend, Database" list="categorySuggestions">
-                        <datalist id="categorySuggestions">
-                            <option th:each="cat : ${categories}" th:value="${cat}">
-                        </datalist>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="description" class="form-label">Description</label>
-                        <textarea class="form-control" id="description" th:field="*{description}"
-                                  rows="2" placeholder="What does this application do?"></textarea>
-                    </div>
-                </div>
-
-                <!-- URL Configuration -->
-                <div class="form-section">
-                    <h5 class="mb-3">
-                        <i class="bi bi-link"></i>
-                        URL Configuration
-                    </h5>
-
-                    <div class="mb-3">
-                        <label for="url" class="form-label">URL to Monitor *</label>
-                        <input type="url" class="form-control" id="url" th:field="*{url}"
-                               placeholder="https://api.example.com/health" required>
-                        <div class="invalid-feedback">Please provide a valid URL (must start with http:// or https://).</div>
-                        <div class="form-text">The endpoint will be checked every 30 seconds.</div>
-                    </div>
-                </div>
-
-                <!-- Status Codes -->
-                <div class="form-section">
-                    <h5 class="mb-3">
-                        <i class="bi bi-check-circle"></i>
-                        Accepted Status Codes
-                    </h5>
-
-                    <p class="text-muted small">Select which HTTP status codes indicate a healthy application:</p>
-
-                    <!-- Quick selection buttons -->
-                    <div class="mb-3">
-                        <button type="button" class="btn btn-sm btn-outline-primary preset-btn" onclick="presetSuccess()">
-                            <i class="bi bi-check-circle"></i> 2xx Success
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-primary preset-btn" onclick="presetRedirect()">
-                            <i class="bi bi-arrow-repeat"></i> 3xx Redirect
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-success preset-btn" onclick="presetDefault()">
-                            <i class="bi bi-star"></i> Default
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary preset-btn" onclick="clearAll()">
-                            <i class="bi bi-eraser"></i> Clear all
-                        </button>
-                    </div>
-
-                    <div class="row g-2 mb-3" id="statusCodes">
-                        <div th:each="code : ${acceptedStatusOptions}" class="col-auto">
-                            <span class="badge status-badge"
-                                  th:classappend="${#strings.contains(monitoredApp.acceptedStatuses, code)} ? 'selected' : ''"
-                                  th:data-code="${code}"
-                                  th:text="${code}"
-                                  onclick="toggleStatus(this)">
-                            </span>
-                        </div>
-                    </div>
-
-                    <!-- Hidden field to store selected statuses -->
-                    <input type="hidden" th:field="*{acceptedStatuses}" id="acceptedStatuses">
-
-                    <div class="alert alert-info small mt-3">
-                        <i class="bi bi-info-circle"></i>
-                        <strong>Common choices:</strong> 200 (OK), 201 (Created), 204 (No Content), 301 (Moved), 302 (Found)
-                    </div>
-
-                    <!-- Affichage de l'ID pour l'édition (optionnel) -->
-                    <div class="small text-muted mt-2">
-                        <i class="bi bi-hash"></i> Application ID: <span th:text="${monitoredApp.id}"></span>
-                    </div>
-                </div>
-
-                <!-- Bouton de soumission dynamique -->
-                <button type="submit" class="btn btn-warning">
-                    <i class="bi bi-pencil-square"></i> Update Application
+                <button type="submit" class="btn" th:classappend="${monitoredApp.id == null} ? 'btn-primary' : 'btn-warning'">
+                    <i th:class="${monitoredApp.id == null} ? 'bi-plus-circle' : 'bi-pencil-square'"></i>
+                    <span th:text="${monitoredApp.id == null} ? 'Add Application' : 'Update Application'"></span>
                 </button>
                 <a href="/" class="btn btn-outline-secondary ms-2">Cancel</a>
             </form>
         </div>
 
-        <!-- Help Sidebar (identique pour les deux modes) -->
+        <!-- Help Sidebar -->
         <div class="col-md-4">
             <div class="card">
                 <div class="card-header bg-info text-white">
@@ -309,27 +243,31 @@
                     <h6 class="card-subtitle mb-2 text-muted">What is Glenn?</h6>
                     <p class="card-text small">
                         Glenn continuously monitors your applications and alerts you when they're down.
-                        Named after the compassionate healer from <em>Monster Girl Doctor</em>.
                     </p>
 
                     <hr>
 
-                    <h6 class="card-subtitle mb-2 text-muted">Status Codes Explained</h6>
+                    <h6 class="card-subtitle mb-2 text-muted">HTTP Status Codes</h6>
                     <ul class="small">
                         <li><strong class="text-success">2xx (Success)</strong> - Application is healthy</li>
                         <li><strong class="text-warning">3xx (Redirect)</strong> - May be acceptable</li>
-                        <li><strong class="text-danger">4xx (Client Error)</strong> - Usually unhealthy</li>
-                        <li><strong class="text-danger">5xx (Server Error)</strong> - Definitely unhealthy</li>
+                        <li><strong class="text-danger">4xx/5xx</strong> - Unhealthy</li>
                     </ul>
 
                     <hr>
 
-                    <h6 class="card-subtitle mb-2 text-muted">Tips</h6>
+                    <h6 class="card-subtitle mb-2 text-muted">Stream Protocols</h6>
                     <ul class="small">
-                        <li>Use a specific health endpoint if available</li>
-                        <li>Monitor both production and staging</li>
-                        <li>Add descriptions for team clarity</li>
+                        <li><strong>PostgreSQL:</strong> postgresql://host:port/db</li>
+                        <li><strong>MySQL/MariaDB:</strong> mysql://host:port/db</li>
+                        <li><strong>MongoDB:</strong> mongodb://host:port/db</li>
+                        <li><strong>SSH:</strong> ssh://user@host:port</li>
+                        <li><strong>Redis:</strong> redis://host:port</li>
+                        <li><strong>RabbitMQ:</strong> amqp://host:port</li>
                     </ul>
+                    <p class="small text-muted">
+                        For streams, we verify that the port is open. No status codes needed.
+                    </p>
                 </div>
             </div>
         </div>
@@ -339,22 +277,34 @@
 <script>
     // Status code selection logic
     const hiddenInput = document.getElementById('acceptedStatuses');
+    const urlInput = document.getElementById('url');
+    const statusCodesSection = document.getElementById('status-codes-section');
+    const statusCodes = document.getElementById('statusCodes');
+    const streamInfo = document.getElementById('stream-info');
+    const protocolBadge = document.getElementById('protocol-badge');
+    const protocolMessage = document.getElementById('protocol-message');
+
+    // Liste des protocoles stream supportés
+    const STREAM_PROTOCOLS = [
+        'postgresql://', 'postgres://',
+        'mysql://', 'mariadb://',
+        'mongodb://',
+        'ssh://',
+        'redis://',
+        'amqp://', 'rabbitmq://'
+    ];
 
     // Initialisation
     document.addEventListener('DOMContentLoaded', function() {
-        // Les badges sont déjà initialisés par Thymeleaf avec la classe 'selected'
-        // Mais on s'assure que le champ caché est à jour
         updateHiddenInput();
+        if (urlInput.value) {
+            detectProtocol();
+        }
     });
 
     function toggleStatus(element) {
-        // Récupérer le code
         const code = element.getAttribute('data-code');
-
-        // Toggle la classe selected
         element.classList.toggle('selected');
-
-        // Mettre à jour le champ caché
         updateHiddenInput();
     }
 
@@ -364,28 +314,88 @@
             selected.push(el.getAttribute('data-code'));
         });
         hiddenInput.value = selected.join(',');
-        console.log('Selected codes:', hiddenInput.value); // Pour debug
     }
 
-    function updateBadgesFromHidden() {
-        // Réinitialiser toutes les sélections
-        document.querySelectorAll('.status-badge').forEach(el => {
-            el.classList.remove('selected');
-        });
+    function detectProtocol() {
+        const url = urlInput.value.trim();
 
-        // Sélectionner ceux qui sont dans le champ caché
-        if (hiddenInput.value) {
-            const selectedCodes = hiddenInput.value.split(',');
-            document.querySelectorAll('.status-badge').forEach(el => {
-                const code = el.getAttribute('data-code');
-                if (selectedCodes.includes(code)) {
-                    el.classList.add('selected');
-                }
-            });
+        if (!url) {
+            resetProtocolInfo();
+            return;
+        }
+
+        // Détection du protocole
+        let isStream = false;
+        let protocol = '';
+        let isValid = false;
+
+        // Vérifier si c'est un stream
+        for (const streamProtocol of STREAM_PROTOCOLS) {
+            if (url.startsWith(streamProtocol)) {
+                isStream = true;
+                protocol = streamProtocol;
+                isValid = true;
+                break;
+            }
+        }
+
+        // Vérifier si c'est HTTP/HTTPS
+        if (!isStream && (url.startsWith('http://') || url.startsWith('https://'))) {
+            protocol = url.startsWith('https') ? 'https://' : 'http://';
+            isValid = true;
+        }
+
+        // Mise à jour de l'interface
+        if (isValid) {
+            urlInput.classList.add('valid');
+            urlInput.classList.remove('is-invalid');
+
+            // Afficher le badge de protocole
+            protocolBadge.style.display = 'inline-block';
+            protocolBadge.textContent = protocol;
+
+            if (isStream) {
+                // Mode Stream
+                protocolBadge.className = 'protocol-badge stream';
+                protocolMessage.textContent = 'Stream connection - checking port availability';
+
+                // Désactiver les status codes
+                statusCodesSection.style.opacity = '0.5';
+                statusCodes.style.pointerEvents = 'none';
+                streamInfo.style.display = 'block';
+            } else {
+                // Mode HTTP
+                protocolBadge.className = 'protocol-badge http';
+                protocolMessage.textContent = 'HTTP connection - checking status codes';
+
+                // Activer les status codes
+                statusCodesSection.style.opacity = '1';
+                statusCodes.style.pointerEvents = 'auto';
+                streamInfo.style.display = 'none';
+            }
+        } else {
+            // URL invalide
+            urlInput.classList.remove('valid');
+            urlInput.classList.add('is-invalid');
+
+            protocolBadge.className = 'protocol-badge unknown';
+            protocolBadge.textContent = '?';
+            protocolMessage.textContent = 'Unknown protocol';
+
+            const feedback = document.getElementById('url-feedback');
+            feedback.textContent = 'Invalid URL. Must start with http://, https://, or a stream protocol';
         }
     }
 
-    // Preset: 2xx Success codes
+    function resetProtocolInfo() {
+        urlInput.classList.remove('valid', 'is-invalid');
+        protocolBadge.style.display = 'none';
+        streamInfo.style.display = 'none';
+        statusCodesSection.style.opacity = '1';
+        statusCodes.style.pointerEvents = 'auto';
+    }
+
+    // Preset functions
     function presetSuccess() {
         const successCodes = ['200', '201', '202', '203', '204', '205', '206'];
         document.querySelectorAll('.status-badge').forEach(el => {
@@ -399,7 +409,6 @@
         updateHiddenInput();
     }
 
-    // Preset: Add 3xx Redirect codes (garde les 2xx existants)
     function presetRedirect() {
         const redirectCodes = ['300', '301', '302', '303', '304', '307', '308'];
         document.querySelectorAll('.status-badge').forEach(el => {
@@ -407,12 +416,10 @@
             if (redirectCodes.includes(code)) {
                 el.classList.add('selected');
             }
-            // Ne pas désélectionner les autres
         });
         updateHiddenInput();
     }
 
-    // Preset: Default (200,201,202,204,301,302,304)
     function presetDefault() {
         const defaultCodes = ['200', '201', '202', '203', '204', '205', '206'];
         document.querySelectorAll('.status-badge').forEach(el => {
@@ -426,7 +433,6 @@
         updateHiddenInput();
     }
 
-    // Clear all selections
     function clearAll() {
         document.querySelectorAll('.status-badge').forEach(el => {
             el.classList.remove('selected');
@@ -440,7 +446,18 @@
         const forms = document.querySelectorAll('.needs-validation');
         Array.from(forms).forEach(form => {
             form.addEventListener('submit', event => {
-                if (!form.checkValidity()) {
+                const url = urlInput.value.trim();
+                const isValidProtocol = url.startsWith('http://') ||
+                                       url.startsWith('https://') ||
+                                       STREAM_PROTOCOLS.some(p => url.startsWith(p));
+
+                if (!isValidProtocol) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    urlInput.classList.add('is-invalid');
+                }
+
+                if (!form.checkValidity() || !isValidProtocol) {
                     event.preventDefault();
                     event.stopPropagation();
                 }
