@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -28,6 +29,8 @@ public class MonitoringService {
 
     @Value("${monitoring.interval:10000}")
     private long monitoringInterval;
+    @Value("${monitoring.timeout:5000}")
+    private int monitoringTimeout;
 
     // --- GESTION DES APPLICATIONS ---
 
@@ -74,8 +77,17 @@ public class MonitoringService {
                 });
     }
 
-
     public Mono<StatusCheck> performHealthCheck(MonitoredApp app) {
+        String url = app.getUrl().toLowerCase().trim();
+
+        if (url.startsWith("http://") || url.startsWith("https://")) {
+            return checkHttp(app);
+        } else {
+            return checkStream(app);
+        }
+    }
+
+    private Mono<StatusCheck> checkHttp(MonitoredApp app) {
         long startTime = System.currentTimeMillis();
         return webClientBuilder.build()
                 .get()
@@ -105,6 +117,49 @@ public class MonitoringService {
                 });
     }
 
+    private Mono<StatusCheck> checkStream(MonitoredApp app) {
+        long startTime = System.currentTimeMillis();
+
+        return Mono.fromCallable(() -> {
+                    try {
+                        // Extraction de l'hôte et du port (ex: postgres://localhost:5432)
+                        String cleanUrl = app.getUrl().replaceAll("^[a-zA-Z]+://", "");
+                        String host;
+                        int port;
+
+                        if (cleanUrl.contains(":")) {
+                            String[] parts = cleanUrl.split(":");
+                            host = parts[0];
+                            port = Integer.parseInt(parts[1]);
+                        } else {
+                            host = cleanUrl;
+                            port = 22;
+                        }
+
+                        try (java.net.Socket socket = new java.net.Socket()) {
+                            socket.connect(new java.net.InetSocketAddress(host, port), this.monitoringTimeout);
+                            return true;
+                        }
+                    } catch (Exception e) {
+                        return false;
+                    }
+                })
+                .subscribeOn(Schedulers.boundedElastic())
+                .map(isUp -> {
+                    long duration = System.currentTimeMillis() - startTime;
+                    return StatusCheck.builder()
+                            .appId(app.getId())
+                            .appName(app.getName())
+                            .isUp(isUp)
+                            // CLÉ : On met 200 si la connexion TCP a réussi, sinon 0 ou 503
+                            .statusCode(isUp ? 200 : 0)
+                            .responseTime(duration + "ms")
+                            .checkedAt(LocalDateTime.now())
+                            .errorMessage(isUp ? null : "Stream/Port Unreachable")
+                            .build();
+                });
+    }
+
     private String formatErrorMessage(Throwable e) {
         if (e == null) return "Unknown error";
 
@@ -117,18 +172,14 @@ public class MonitoringService {
                 return "SSL Error: Server name not recognized (SNI issue)";
             }
             return "SSL Handshake failed: " + (msg != null ? msg : "Unknown SSL error");
-        }
-        else if (e instanceof java.util.concurrent.TimeoutException) {
+        } else if (e instanceof java.util.concurrent.TimeoutException) {
             return "Connection timeout after 5 seconds";
-        }
-        else if (e instanceof io.netty.channel.ConnectTimeoutException) {
+        } else if (e instanceof io.netty.channel.ConnectTimeoutException) {
             return "Connection timeout: Server unreachable";
-        }
-        else if (className.contains("ConnectException") ||
+        } else if (className.contains("ConnectException") ||
                 (msg != null && msg.contains("Connection refused"))) {
             return "Connection refused: Server is down or port closed";
-        }
-        else if (e instanceof org.springframework.web.reactive.function.client.WebClientRequestException) {
+        } else if (e instanceof org.springframework.web.reactive.function.client.WebClientRequestException) {
             // Extraire la cause racine si possible
             Throwable cause = e.getCause();
             if (cause != null) {
@@ -139,8 +190,7 @@ public class MonitoringService {
                 return "Request failed: " + causeMsg;
             }
             return "Request failed: " + (msg != null ? msg : "Unknown request error");
-        }
-        else if (e instanceof java.net.ConnectException) {
+        } else if (e instanceof java.net.ConnectException) {
             return "Connection refused: " + (msg != null ? msg : "Server unreachable");
         }
 

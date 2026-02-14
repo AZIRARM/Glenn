@@ -213,7 +213,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## 📝 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the GNU GENERAL PUBLIC LICENSE - see the LICENSE file for details.
 
 ## 👏 Acknowledgments
 
@@ -221,7 +221,114 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - Named after Glenn Litbeit from "Monster Girl Doctor" (Kensuke Koba)
 - Built with Spring Boot and the amazing Java ecosystem
 
+
+
+### Glenn vs Other Monitoring Solutions
+
+#### Why Glenn Stands Out
+
+| Feature | Glenn | Uptime Kuma | Gatus | UptimeRobot |
+| :--- | :--- | :--- | :--- | :--- |
+| **Modern Tech Stack** | ✅ Spring WebFlux/R2DBC (Reactive) | ❌ Node.js (Blocking) | ✅ Go (Efficient) | ❌ Legacy PHP |
+| **Reactive Architecture** | ✅ Non-blocking, High Concurrency | ❌ Synchronous I/O | ✅ Lightweight | ❌ Traditional |
+| **Database** | ✅ PostgreSQL (Enterprise-grade) | ❌ SQLite (File-based) | ❌ No persistence | ✅ Cloud |
+| **Stream Monitoring** | ✅ PostgreSQL, MySQL, MongoDB, SSH, Redis, RabbitMQ | ❌ HTTP/HTTPS only | ❌ HTTP/HTTPS only | ❌ HTTP/HTTPS only |
+| **Real-time Updates** | ✅ SSE (Server-Sent Events) | ✅ WebSockets | ❌ Polling | ❌ Polling |
+| **History Retention** | ✅ Full SQL database (years) | ✅ File-based (limited) | ❌ In-memory only | ⚠️ Limited (paid) |
+| **Self-hosted** | ✅ Docker, easy setup | ✅ Docker | ✅ Single binary | ❌ SaaS only |
+| **Category Filtering** | ✅ Yes | ✅ Yes | ❌ No | ✅ Yes |
+| **Response Time Tracking** | ✅ Detailed per check | ✅ Basic | ✅ Basic | ✅ Basic |
+
+#### 🎯 Perfect for Java Developers
+
+| Aspect | Glenn | Others |
+| :--- | :--- | :--- |
+| **Tech Stack Familiarity** | ✅ Java 21, Spring Ecosystem | ❌ Node.js, Go, PHP |
+| **Code Customization** | ✅ Full Java control | ❌ Limited by design |
+| **Integration** | ✅ Easy with Java services | ⚠️ Requires adapters |
+| **Learning Curve** | ✅ Natural for Java devs | ⚠️ New languages/frameworks |
+
+#### 📊 Performance & Scalability
+
+| Metric | Glenn | Uptime Kuma | Gatus | UptimeRobot |
+| :--- | :--- | :--- | :--- | :--- |
+| **Architecture** | Reactive, non-blocking | Event-loop (Node.js) | Concurrent (Go) | Traditional |
+| **Database** | PostgreSQL connection pool | SQLite (single-threaded) | None | Cloud |
+| **Concurrent checks** | ⚡ Excellent | ⚠️ Moderate | ✅ Good | ✅ Excellent |
+| **Memory usage** | ~150-250MB | ~50-100MB | ~10-20MB | N/A |
+
+#### 🚀 What Makes Glenn Unique
+
+##### 1. **Stream Protocol Support**
+Unlike competitors limited to HTTP/HTTPS, Glenn monitors:
+- PostgreSQL databases
+- MySQL/MariaDB
+- MongoDB
+- SSH services
+- Redis instances
+- RabbitMQ/AMQP
+
+##### 2. **Enterprise-Grade Database**
+- PostgreSQL persistence means:
+   - Years of history
+   - Complex queries
+   - Data integrity
+   - Backup/restore capabilities
+
+##### 3. **Reactive from the Core**
+- Spring WebFlux + R2DBC = truly non-blocking
+- Handles thousands of concurrent checks
+- Efficient resource usage
+- Perfect for microservices environments
+
+##### 4. **Developer-Friendly**
+- Pure Java - easy to extend
+- Familiar Spring ecosystem
+- Clean, maintainable codebase
+- Perfect for teams already using Java
+
+#### 📈 Ideal Use Cases
+
+| Scenario | Glenn | Other Solutions |
+| :--- | :--- | :--- |
+| **Java/Spring ecosystem** | ✅ Perfect fit | ⚠️ Foreign stack |
+| **Mixed protocols (HTTP + DB)** | ✅ One tool for everything | ❌ Need multiple tools |
+| **Long-term historical analysis** | ✅ SQL-powered | ⚠️ Limited retention |
+| **High-frequency checks** | ✅ Reactive architecture | ⚠️ May struggle |
+| **Self-hosted with PostgreSQL** | ✅ Native support | ⚠️ SQLite limitations |
+
+#### 🎓 Comparison Summary
+
+| Aspect | Glenn's Advantage |
+| :--- | :--- |
+| **Technology** | Most modern stack (Spring WebFlux + R2DBC) |
+| **Protocol Support** | Widest (HTTP + Databases + SSH + Message queues) |
+| **Data Persistence** | Enterprise-grade (PostgreSQL) |
+| **Developer Experience** | Best for Java/Spring developers |
+| **Architecture** | Truly reactive, non-blocking |
+| **Customization** | Full control via Java code |
+
+#### 💡 When to Choose Glenn
+
+- ✅ You're a Java/Spring developer
+- ✅ You need to monitor databases and services, not just HTTP
+- ✅ You want long-term history in PostgreSQL
+- ✅ You prefer self-hosted solutions
+- ✅ You need a lightweight but powerful monitoring tool
+
+#### 🔮 Future Potential
+
+| Coming Soon | Status |
+| :--- | :--- |
+| **Notifications** (Slack, Discord, Email) | 🚧 Planned |
+| **Public Status Pages** | 🚧 Planned |
+| **SSL Certificate Monitoring** | 🚧 Planned |
+| **REST API** | 🚧 Planned |
+| **Authentication & Multi-user** | 🚧 Planned |
+
+
+**Glenn isn't just another uptime monitor. It's a modern, reactive health monitoring platform built for Java developers who need more than just HTTP checks.**
 ## 📧 Contact
 
-Project Link: [https://github.com/azirar/glenn](https://github.com/azirar/glenn)
+Project Link: [Glenn on Github](https://github.com/azirarm/glenn)
 
