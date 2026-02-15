@@ -96,6 +96,21 @@ public class AppController {
                 });
     }
 
+
+    @GetMapping("/app/{id}/history")
+    @ResponseBody
+    public Mono<Map<String, Object>> getAppHistory(@PathVariable Long id) {
+        return monitoringService.getAppById(id)
+                .flatMap(app -> monitoringService.getAppHistory(id)
+                        .collectList()
+                        .map(history -> {
+                            Map<String, Object> response = new HashMap<>();
+                            response.put("history", history);
+                            response.put("stats", calculateStats(history));
+                            return response;
+                        }));
+    }
+
     private Map<String, Object> calculateStats(List<StatusCheck> history) {
         Map<String, Object> stats = new HashMap<>();
 
@@ -105,20 +120,16 @@ public class AppController {
             stats.put("avgResponseTime", "N/A");
             stats.put("lastStatus", "N/A");
             stats.put("lastTime", "N/A");
-            stats.put("chartChecks", new ArrayList<>());
             return stats;
         }
 
-        // Total des checks
         int total = history.size();
         stats.put("totalChecks", total);
 
-        // Taux de succès
         long successCount = history.stream().filter(StatusCheck::getIsUp).count();
         double successRate = (successCount * 100.0) / total;
         stats.put("successRate", Math.round(successRate * 10) / 10.0);
 
-        // Temps de réponse moyen
         double avgResponse = history.stream()
                 .mapToInt(check -> {
                     String responseStr = check.getResponseTime();
@@ -141,20 +152,14 @@ public class AppController {
 
         stats.put("avgResponseTime", avgResponse > 0 ? Math.round(avgResponse) + "ms" : "N/A");
 
-        // Dernier statut (le premier de la liste car triée par date descending)
         StatusCheck lastCheck = history.get(0);
         stats.put("lastStatus", lastCheck.getIsUp() ? "UP" : "DOWN");
-        stats.put("lastStatusCode", lastCheck.getStatusCode());
-        stats.put("lastResponseTime", lastCheck.getResponseTime());
         stats.put("lastTime", lastCheck.getCheckedAt() != null ?
-                DateTimeFormatter.ofPattern("HH:mm:ss").format(lastCheck.getCheckedAt()) : "N/A");
-
-        // Préparer les données pour le graphique (20 derniers checks)
-        List<StatusCheck> recentChecks = history.stream().limit(20).collect(Collectors.toList());
-        stats.put("chartChecks", recentChecks);
+                java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss").format(lastCheck.getCheckedAt()) : "N/A");
 
         return stats;
     }
+
 
     @GetMapping("/app/add")
     public Mono<String> addAppForm(Model model) {

@@ -48,6 +48,39 @@
             color: #6c757d;
             font-size: 0.9rem;
         }
+        .chart-container {
+            margin-bottom: 20px;
+        }
+        .chart-card {
+            height: 100%;
+        }
+        .chart-card .card-body {
+            padding: 10px;
+        }
+        canvas {
+            max-height: 180px;
+            width: 100% !important;
+        }
+        .refresh-indicator {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            z-index: 1000;
+        }
+        .refresh-spinner {
+            display: inline-block;
+            animation: spin 1s linear infinite;
+            margin-right: 5px;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -59,6 +92,12 @@
         </a>
     </div>
 </nav>
+
+<!-- Refresh indicator -->
+<div class="refresh-indicator" id="refreshIndicator">
+    <i class="bi bi-arrow-repeat refresh-spinner" id="refreshSpinner" style="display: none;"></i>
+    <span id="refreshStatus">Auto-refresh active</span>
+</div>
 
 <div class="container mt-4" th:with="app=${app}">
     <!-- Header with navigation -->
@@ -76,7 +115,6 @@
                 <i class="bi bi-pencil"></i> Edit
             </a>
 
-            <!-- CORRECTION: Formulaire toggle avec méthode post explicite -->
             <form th:action="@{/app/{id}/toggle(id=${app.id})}" method="post" style="display: inline;">
                 <button type="submit" class="btn"
                         th:classappend="${app.active} ? 'btn-outline-warning' : 'btn-outline-success'">
@@ -85,7 +123,6 @@
                 </button>
             </form>
 
-            <!-- Formulaire delete -->
             <form th:action="@{/app/{id}/delete(id=${app.id})}" method="post" style="display: inline;"
                   th:data-app-name="${app.name}" onsubmit="return confirmDelete(this)">
                 <button type="submit" class="btn btn-outline-danger">
@@ -159,7 +196,7 @@
     </div>
 
     <!-- Stats Cards -->
-    <div class="row mb-4" th:if="${stats != null and stats.totalChecks > 0}">
+    <div class="row mb-4" th:if="${stats != null and stats.totalChecks > 0}" id="stats-cards">
         <div class="col-md-3">
             <div class="uptime-card">
                 <h6 class="text-muted">Success Rate</h6>
@@ -210,16 +247,81 @@
         </div>
     </div>
 
-    <!-- Response Time Chart -->
-    <div class="card mb-4" th:if="${stats != null and stats.totalChecks > 0}">
+    <!-- Multiple Response Time Charts -->
+    <div class="card mb-4">
         <div class="card-header">
             <h5 class="mb-0">
                 <i class="bi bi-graph-up"></i>
-                Response Time History (last 20 checks)
+                Response Time History
             </h5>
         </div>
         <div class="card-body">
-            <canvas id="responseTimeChart" style="height: 300px; width: 100%;"></canvas>
+            <!-- First row: 3 charts -->
+            <div class="row">
+                <div class="col-md-4 chart-container">
+                    <div class="card chart-card">
+                        <div class="card-header py-2">
+                            <small><strong>Last 10 checks</strong></small>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="chartRecent"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 chart-container">
+                    <div class="card chart-card">
+                        <div class="card-header py-2">
+                            <small><strong>Last Hour</strong></small>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="chartHour"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 chart-container">
+                    <div class="card chart-card">
+                        <div class="card-header py-2">
+                            <small><strong>Last 24 Hours</strong></small>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="chartDay"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Second row: 3 charts -->
+            <div class="row">
+                <div class="col-md-4 chart-container">
+                    <div class="card chart-card">
+                        <div class="card-header py-2">
+                            <small><strong>Last Week</strong></small>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="chartWeek"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 chart-container">
+                    <div class="card chart-card">
+                        <div class="card-header py-2">
+                            <small><strong>Last Month</strong></small>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="chartMonth"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 chart-container">
+                    <div class="card chart-card">
+                        <div class="card-header py-2">
+                            <small><strong>Last Year</strong></small>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="chartYear"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -228,40 +330,14 @@
         <div class="card-header">
             <h5 class="mb-0">
                 <i class="bi bi-clock-history"></i>
-                Status History (last 30 checks)
+                Status History (last 10 checks)
             </h5>
         </div>
         <div class="card-body">
             <div class="list-group" id="historyList">
-                <div th:each="check : ${history}"
-                     class="list-group-item history-item d-flex justify-content-between align-items-center"
-                     th:classappend="${check.isUp} ? 'up' : 'down'">
-
-                    <div class="d-flex align-items-center">
-                        <span class="status-indicator"
-                              th:classappend="${check.isUp} ? 'bg-success' : 'bg-danger'"></span>
-                        <div>
-                            <strong th:text="${check.isUp} ? 'UP' : 'DOWN'"></strong>
-                            <span class="text-muted mx-2">·</span>
-                            <span class="text-muted" th:text="${check.statusCode}">200</span>
-                            <span class="text-muted mx-2">·</span>
-                            <span th:text="${check.responseTime}">120ms</span>
-                        </div>
-                    </div>
-
-                    <div>
-                        <small class="text-muted"
-                               th:text="${check.checkedAt != null ? #temporals.format(check.checkedAt, 'HH:mm:ss') : 'Unknown'}">
-                            12:00:00
-                        </small>
-                        <span th:if="${check.errorMessage}"
-                              class="badge bg-danger ms-2"
-                              th:title="${check.errorMessage}">
-                            <i class="bi bi-exclamation-triangle"></i>
-                        </span>
-                    </div>
-                </div>
+                <!-- Rempli par JavaScript -->
             </div>
+            <div class="text-center text-muted mt-2 small" id="historyCount"></div>
         </div>
     </div>
 </div>
@@ -272,87 +348,276 @@
         return confirm(`Are you sure you want to delete "${appName}"? This action cannot be undone.`);
     }
 
-    // Get chart data from stats
-    document.addEventListener('DOMContentLoaded', function() {
-        const stats = /*[[${stats}]]*/ null;
+    // Chart instances for refresh
+    const charts = {};
+    let appId = /*[[${app.id}]]*/ null;
 
-        if (stats && stats.chartChecks && stats.chartChecks.length > 0) {
-            const chartChecks = stats.chartChecks.reverse();
+    function extractResponseTime(responseTime) {
+        if (!responseTime) return 0;
+        const match = responseTime.match(/(\d+)/);
+        return match ? (parseInt(match[1]) > 5000 ? 5000 : parseInt(match[1])) : 0;
+    }
 
-            const responseTimes = chartChecks.map(check => {
-                if (check.responseTime) {
-                    const match = check.responseTime.match(/(\d+)/);
-                    if (match) {
-                        const val = parseInt(match[1]);
-                        return val > 5000 ? 5000 : val;
-                    }
-                }
-                return 0;
-            });
+    function aggregateData(checks, intervalMinutes) {
+        if (!checks || checks.length === 0) return [];
 
-            const labels = chartChecks.map(check => {
-                if (check.checkedAt) {
-                    const date = new Date(check.checkedAt);
-                    return date.getHours().toString().padStart(2, '0') + ':' +
-                           date.getMinutes().toString().padStart(2, '0');
-                }
-                return 'N/A';
-            });
+        const grouped = new Map();
 
-            const ctx = document.getElementById('responseTimeChart').getContext('2d');
+        checks.forEach(check => {
+            if (!check.checkedAt) return;
+            const date = new Date(check.checkedAt);
+            const key = Math.floor(date.getTime() / (intervalMinutes * 60000));
 
-            if (window.myChart) {
-                window.myChart.destroy();
+            if (!grouped.has(key)) {
+                grouped.set(key, {
+                    totalTime: 0,
+                    count: 0,
+                    isUp: true,
+                    date: date
+                });
             }
 
-            window.myChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Response Time (ms)',
-                        data: responseTimes,
-                        borderColor: '#0d6efd',
-                        backgroundColor: 'rgba(13, 110, 253, 0.1)',
-                        tension: 0.4,
-                        fill: true,
-                        pointBackgroundColor: chartChecks.map(check => {
-                            return check.isUp ? '#198754' : '#dc3545';
-                        }),
-                        pointBorderColor: '#fff',
-                        pointBorderWidth: 2,
-                        pointRadius: 5,
-                        pointHoverRadius: 7
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    const check = chartChecks[context.dataIndex];
-                                    return [
-                                        `Response: ${context.raw}ms`,
-                                        `Status: ${check.statusCode}`,
-                                        `Health: ${check.isUp ? 'UP' : 'DOWN'}`
-                                    ];
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            max: 5000,
-                            title: { display: true, text: 'Response Time (ms)' }
-                        }
-                    }
-                }
-            });
+            const group = grouped.get(key);
+            const timeValue = extractResponseTime(check.responseTime);
+            if (timeValue > 0) {
+                group.totalTime += timeValue;
+                group.count++;
+            }
+            if (!check.isUp) group.isUp = false;
+        });
+
+        return Array.from(grouped.values())
+            .map(g => ({
+                avgTime: g.count > 0 ? Math.round(g.totalTime / g.count) : 0,
+                isUp: g.isUp,
+                date: g.date
+            }))
+            .sort((a, b) => a.date - b.date);
+    }
+
+    function createChart(canvasId, data, colors) {
+        const ctx = document.getElementById(canvasId)?.getContext('2d');
+        if (!ctx) return null;
+
+        // Destroy existing chart if any
+        if (charts[canvasId]) {
+            charts[canvasId].destroy();
         }
+
+        charts[canvasId] = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.map(() => ''),
+                datasets: [{
+                    data: data,
+                    borderColor: '#0d6efd',
+                    backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    pointBackgroundColor: colors,
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 1,
+                    pointRadius: 3,
+                    pointHoverRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                scales: { x: { display: false }, y: { display: false, beginAtZero: true, max: 5000 } },
+                elements: { line: { borderWidth: 1 } }
+            }
+        });
+
+        return charts[canvasId];
+    }
+
+    function updateHistoryList(history) {
+        const historyList = document.getElementById('historyList');
+        const historyCount = document.getElementById('historyCount');
+        if (!historyList) return;
+
+        let html = '';
+        for (let i = 0; i < Math.min(10, history.length); i++) {
+            const check = history[i];
+            const statusClass = check.isUp ? 'up' : 'down';
+            const statusText = check.isUp ? 'UP' : 'DOWN';
+            const statusColor = check.isUp ? 'bg-success' : 'bg-danger';
+            const time = check.checkedAt ? new Date(check.checkedAt).toLocaleTimeString() : 'Unknown';
+
+            html += `
+                <div class="list-group-item history-item d-flex justify-content-between align-items-center ${statusClass}">
+                    <div class="d-flex align-items-center">
+                        <span class="status-indicator ${statusColor}"></span>
+                        <div>
+                            <strong>${statusText}</strong>
+                            <span class="text-muted mx-2">·</span>
+                            <span class="text-muted">${check.statusCode}</span>
+                            <span class="text-muted mx-2">·</span>
+                            <span>${check.responseTime || '0ms'}</span>
+                        </div>
+                    </div>
+                    <div>
+                        <small class="text-muted">${time}</small>
+                        ${check.errorMessage ? `<span class="badge bg-danger ms-2" title="${check.errorMessage}"><i class="bi bi-exclamation-triangle"></i></span>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        historyList.innerHTML = html;
+        if (historyCount) {
+            historyCount.textContent = `Showing ${Math.min(10, history.length)} of ${history.length} total checks`;
+        }
+    }
+
+    function updateStatsCards(stats) {
+        if (!stats) return;
+
+        const successRateEl = document.querySelector('.uptime-card:first-child .uptime-value');
+        const avgResponseEl = document.querySelector('.uptime-card:nth-child(2) .uptime-value');
+        const lastStatusEl = document.querySelector('.uptime-card:nth-child(3) .uptime-value');
+        const lastTimeEl = document.querySelector('.uptime-card:nth-child(3) .text-muted span');
+        const totalChecksEl = document.querySelector('.uptime-card:nth-child(4) .uptime-value');
+        const lastChecksSpan = document.querySelector('.uptime-card:first-child .text-success span');
+
+        if (successRateEl) successRateEl.textContent = stats.successRate + '%';
+        if (avgResponseEl) avgResponseEl.textContent = stats.avgResponseTime;
+        if (lastStatusEl) {
+            lastStatusEl.textContent = stats.lastStatus;
+            lastStatusEl.className = `uptime-value ${stats.lastStatus === 'UP' ? 'text-success' : 'text-danger'}`;
+        }
+        if (lastTimeEl) lastTimeEl.textContent = stats.lastTime;
+        if (totalChecksEl) totalChecksEl.textContent = stats.totalChecks;
+        if (lastChecksSpan) lastChecksSpan.textContent = stats.totalChecks;
+    }
+
+    function updateAllCharts(history) {
+        if (!history || history.length === 0) return;
+
+        // 1. Recent 10 checks
+        const recent10 = history.slice(0, 10).reverse();
+        const recentData = recent10.map(c => extractResponseTime(c.responseTime));
+        const recentColors = recent10.map(c => c.isUp ? '#198754' : '#dc3545');
+        createChart('chartRecent', recentData, recentColors);
+
+        // 2. Last Hour (60 min)
+        const hourChecks = history.filter(c => {
+            const date = new Date(c.checkedAt);
+            return date >= new Date(Date.now() - 60 * 60000);
+        }).slice(0, 20).reverse();
+        if (hourChecks.length > 0) {
+            createChart('chartHour',
+                hourChecks.map(c => extractResponseTime(c.responseTime)),
+                hourChecks.map(c => c.isUp ? '#198754' : '#dc3545')
+            );
+        }
+
+        // 3. Last 24 Hours
+        const dayChecks = history.filter(c => {
+            const date = new Date(c.checkedAt);
+            return date >= new Date(Date.now() - 24 * 60 * 60000);
+        }).slice(0, 30).reverse();
+        if (dayChecks.length > 0) {
+            createChart('chartDay',
+                dayChecks.map(c => extractResponseTime(c.responseTime)),
+                dayChecks.map(c => c.isUp ? '#198754' : '#dc3545')
+            );
+        }
+
+        // 4. Last Week
+        const weekChecks = history.filter(c => {
+            const date = new Date(c.checkedAt);
+            return date >= new Date(Date.now() - 7 * 24 * 60 * 60000);
+        });
+        if (weekChecks.length > 0) {
+            const weekAgg = aggregateData(weekChecks, 60);
+            if (weekAgg.length > 0) {
+                createChart('chartWeek',
+                    weekAgg.map(g => g.avgTime),
+                    weekAgg.map(g => g.isUp ? '#198754' : '#dc3545')
+                );
+            }
+        }
+
+        // 5. Last Month
+        const monthChecks = history.filter(c => {
+            const date = new Date(c.checkedAt);
+            return date >= new Date(Date.now() - 30 * 24 * 60 * 60000);
+        });
+        if (monthChecks.length > 0) {
+            const monthAgg = aggregateData(monthChecks, 360);
+            if (monthAgg.length > 0) {
+                createChart('chartMonth',
+                    monthAgg.map(g => g.avgTime),
+                    monthAgg.map(g => g.isUp ? '#198754' : '#dc3545')
+                );
+            }
+        }
+
+        // 6. Last Year
+        const yearChecks = history.filter(c => {
+            const date = new Date(c.checkedAt);
+            return date >= new Date(Date.now() - 365 * 24 * 60 * 60000);
+        });
+        if (yearChecks.length > 0) {
+            const yearAgg = aggregateData(yearChecks, 1440);
+            if (yearAgg.length > 0) {
+                createChart('chartYear',
+                    yearAgg.map(g => g.avgTime),
+                    yearAgg.map(g => g.isUp ? '#198754' : '#dc3545')
+                );
+            }
+        }
+    }
+
+    function refreshData() {
+        const refreshSpinner = document.getElementById('refreshSpinner');
+        const refreshStatus = document.getElementById('refreshStatus');
+
+        refreshSpinner.style.display = 'inline-block';
+        refreshStatus.textContent = 'Refreshing...';
+
+        fetch(`/app/${appId}/history`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.history && data.history.length > 0) {
+                    updateAllCharts(data.history);
+                    updateHistoryList(data.history);
+                }
+                if (data.stats) {
+                    updateStatsCards(data.stats);
+                }
+
+                refreshSpinner.style.display = 'none';
+                refreshStatus.textContent = 'Updated';
+                setTimeout(() => {
+                    refreshStatus.textContent = 'Auto-refresh active';
+                }, 2000);
+            })
+            .catch(error => {
+                console.error('Refresh error:', error);
+                refreshSpinner.style.display = 'none';
+                refreshStatus.textContent = 'Error';
+                setTimeout(() => {
+                    refreshStatus.textContent = 'Auto-refresh active';
+                }, 2000);
+            });
+    }
+
+    // Initial load avec les données du template
+    document.addEventListener('DOMContentLoaded', function() {
+        const stats = /*[[${stats}]]*/ null;
+        const history = /*[[${history}]]*/ [];
+
+        if (stats && history && history.length > 0) {
+            updateAllCharts(history);
+            updateHistoryList(history);
+        }
+
+        // Start auto-refresh every 10 seconds
+        setInterval(refreshData, 10000);
     });
 </script>
 

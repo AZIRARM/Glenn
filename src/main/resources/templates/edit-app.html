@@ -100,6 +100,7 @@
 
     <div class="row">
         <div class="col-md-8">
+            <!-- Action inchangée - /app/save -->
             <form th:action="@{/app/save}" th:object="${monitoredApp}" method="post">
 
                 <!-- ID caché -->
@@ -170,6 +171,24 @@
                     </div>
                 </div>
 
+                <!-- NOUVEAU : Webhook URL (Notifications) -->
+                <div class="form-section">
+                    <h5 class="mb-3">
+                        <i class="bi bi-bell"></i>
+                        Notifications
+                    </h5>
+
+                    <div class="mb-3">
+                        <label for="webhookUrl" class="form-label">Webhook URL (Optional)</label>
+                        <input type="url" class="form-control" id="webhookUrl" th:field="*{webhookUrl}"
+                               placeholder="https://hooks.slack.com/services/xxx or https://discord.com/api/webhooks/xxx">
+                        <div class="form-text">
+                            <i class="bi bi-info-circle"></i>
+                            Get alerts via Slack, Discord, Microsoft Teams, or Mattermost. Leave empty for no notifications.
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Status Codes -->
                 <div class="form-section" id="status-codes-section">
                     <h5 class="mb-3">
@@ -220,7 +239,7 @@
                     </div>
                 </div>
 
-                <!-- Bouton de soumission -->
+                <!-- Bouton de soumission inchangé -->
                 <button type="submit" class="btn btn-warning">
                     <i class="bi bi-pencil-square"></i> Update Application
                 </button>
@@ -228,7 +247,7 @@
             </form>
         </div>
 
-        <!-- Help Sidebar -->
+        <!-- Help Sidebar (avec ajout des infos webhook) -->
         <div class="col-md-4">
             <div class="card">
                 <div class="card-header bg-info text-white">
@@ -240,6 +259,20 @@
                     <p class="card-text small">
                         Glenn continuously monitors your applications and alerts you when they're down.
                         Named after the compassionate healer from <em>Monster Girl Doctor</em>.
+                    </p>
+
+                    <hr>
+
+                    <!-- NOUVELLE SECTION dans la sidebar -->
+                    <h6 class="card-subtitle mb-2 text-muted">Webhook Notifications</h6>
+                    <ul class="small">
+                        <li><strong>Slack:</strong> https://hooks.slack.com/services/...</li>
+                        <li><strong>Discord:</strong> https://discord.com/api/webhooks/...</li>
+                        <li><strong>Microsoft Teams:</strong> https://yourtenant.webhook.office.com/...</li>
+                        <li><strong>Mattermost:</strong> https://mattermost.com/hooks/...</li>
+                    </ul>
+                    <p class="small text-muted">
+                        You'll receive alerts when services go down and when they recover.
                     </p>
 
                     <hr>
@@ -282,7 +315,7 @@
 </div>
 
 <script>
-    // Status code selection logic
+    // Status code selection logic (inchangé)
     const hiddenInput = document.getElementById('acceptedStatuses');
     const urlInput = document.getElementById('url');
     const statusCodesSection = document.getElementById('status-codes-section');
@@ -303,23 +336,15 @@
 
     // Initialisation
     document.addEventListener('DOMContentLoaded', function() {
-        // S'assurer que le champ caché est à jour avec les badges sélectionnés
         updateHiddenInput();
-
-        // Détecter le protocole de l'URL existante
         if (urlInput && urlInput.value) {
             detectProtocol();
         }
     });
 
     function toggleStatus(element) {
-        // Récupérer le code
         const code = element.getAttribute('data-code');
-
-        // Toggle la classe selected
         element.classList.toggle('selected');
-
-        // Mettre à jour le champ caché
         updateHiddenInput();
     }
 
@@ -329,7 +354,6 @@
             selected.push(el.getAttribute('data-code'));
         });
         hiddenInput.value = selected.join(',');
-        console.log('Selected codes:', hiddenInput.value); // Pour debug
     }
 
     function detectProtocol() {
@@ -340,12 +364,10 @@
             return;
         }
 
-        // Détection du protocole
         let isStream = false;
         let protocol = '';
         let isValid = false;
 
-        // Vérifier si c'est un stream
         for (const streamProtocol of STREAM_PROTOCOLS) {
             if (url.startsWith(streamProtocol)) {
                 isStream = true;
@@ -355,42 +377,32 @@
             }
         }
 
-        // Vérifier si c'est HTTP/HTTPS
         if (!isStream && (url.startsWith('http://') || url.startsWith('https://'))) {
             protocol = url.startsWith('https') ? 'https://' : 'http://';
             isValid = true;
         }
 
-        // Mise à jour de l'interface
         if (isValid) {
             urlInput.classList.add('valid');
             urlInput.classList.remove('is-invalid');
 
-            // Afficher le badge de protocole
             protocolBadge.style.display = 'inline-block';
             protocolBadge.textContent = protocol;
 
             if (isStream) {
-                // Mode Stream
                 protocolBadge.className = 'protocol-badge stream';
                 protocolMessage.textContent = 'Stream connection - checking port availability';
-
-                // Désactiver les status codes
                 statusCodesSection.style.opacity = '0.5';
                 statusCodes.style.pointerEvents = 'none';
                 streamInfo.style.display = 'block';
             } else {
-                // Mode HTTP
                 protocolBadge.className = 'protocol-badge http';
                 protocolMessage.textContent = 'HTTP connection - checking status codes';
-
-                // Activer les status codes
                 statusCodesSection.style.opacity = '1';
                 statusCodes.style.pointerEvents = 'auto';
                 streamInfo.style.display = 'none';
             }
         } else {
-            // URL invalide
             urlInput.classList.remove('valid');
             urlInput.classList.add('is-invalid');
 
@@ -415,7 +427,6 @@
         statusCodes.style.pointerEvents = 'auto';
     }
 
-    // Preset: 2xx Success codes
     function presetSuccess() {
         const successCodes = ['200', '201', '202', '203', '204', '205', '206'];
         document.querySelectorAll('.status-badge').forEach(el => {
@@ -429,7 +440,6 @@
         updateHiddenInput();
     }
 
-    // Preset: Add 3xx Redirect codes (garde les 2xx existants)
     function presetRedirect() {
         const redirectCodes = ['300', '301', '302', '303', '304', '307', '308'];
         document.querySelectorAll('.status-badge').forEach(el => {
@@ -437,12 +447,10 @@
             if (redirectCodes.includes(code)) {
                 el.classList.add('selected');
             }
-            // Ne pas désélectionner les autres
         });
         updateHiddenInput();
     }
 
-    // Preset: Default (200,201,202,204,301,302,304)
     function presetDefault() {
         const defaultCodes = ['200', '201', '202', '203', '204', '205', '206'];
         document.querySelectorAll('.status-badge').forEach(el => {
@@ -456,7 +464,6 @@
         updateHiddenInput();
     }
 
-    // Clear all selections
     function clearAll() {
         document.querySelectorAll('.status-badge').forEach(el => {
             el.classList.remove('selected');
@@ -464,7 +471,6 @@
         updateHiddenInput();
     }
 
-    // Validation du formulaire
     (function() {
         'use strict';
         const forms = document.querySelectorAll('.needs-validation');

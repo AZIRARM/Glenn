@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @Repository
 public interface StatusCheckRepository extends R2dbcRepository<StatusCheck, Long> {
 
-    Flux<StatusCheck> findTop100ByAppIdOrderByCheckedAtDesc(Long appId);
+    Flux<StatusCheck> findTop5000ByAppIdOrderByCheckedAtDesc(Long appId);
 
     @Query("SELECT * FROM status_checks WHERE checked_at > DATEADD('MINUTE', -30, CURRENT_TIMESTAMP()) ORDER BY checked_at DESC")
     Flux<StatusCheck> findLast30Minutes();
