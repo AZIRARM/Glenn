@@ -24,7 +24,7 @@ public class NotificationScheduler {
     private final StatusCheckRepository statusRepository;
     private final WebClient webClient;
 
-    @Value("${notification.reminder-interval:300000}")
+    @Value("${notification.reminder-interval:300000}") // 5 minutes par défaut
     private long reminderIntervalMs;
 
     public NotificationScheduler(MonitoredAppRepository appRepository,
