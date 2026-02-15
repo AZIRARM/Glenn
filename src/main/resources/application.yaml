@@ -4,34 +4,38 @@ spring:
   main:
     allow-bean-definition-overriding: true
 
-  # 1. Route JDBC pour Liquibase
+  # 1. Route JDBC pour Liquibase - CORRIGÉ
   datasource:
-    jdbc-url: ${POSTGRES_URL:jdbc}  # Valeur par défaut ajoutée
-    username: ${POSTGRES_USERNAME}
-    password: ${POSTGRES_PWD}
+    jdbc-url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/glenn}  # Valeur par défaut correcte
+    username: ${POSTGRES_USERNAME:postgres}
+    password: ${POSTGRES_PWD:postgres}
     driver-class-name: org.postgresql.Driver
-    hikari:  # Configuration optionnelle du pool de connexions JDBC
+    hikari:
       maximum-pool-size: 2
+      minimum-idle: 1
+      idle-timeout: 60000
+      connection-timeout: 5000
+      max-lifetime: 300000
 
   # 2. Route R2DBC pour ton code réactif
   r2dbc:
-    url: ${POSTGRES_REACTIVE_URL}  # Format r2dbc:
-    username: ${POSTGRES_USERNAME}
-    password: ${POSTGRES_PWD}
-    pool:  # Configuration optionnelle du pool R2DBC
+    url: ${POSTGRES_REACTIVE_URL:r2dbc:postgresql://localhost:5432/glenn}
+    username: ${POSTGRES_USERNAME:postgres}
+    password: ${POSTGRES_PWD:postgres}
+    pool:
       max-size: 10
       initial-size: 5
+      max-idle-time: 2m
+      validation-query: SELECT 1
 
   # 3. Liquibase
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
     default-schema: glenn
     enabled: true
-    # Ajout de ces propriétés pour faciliter le debug
-    drop-first: false  # Ne pas dropper la base au démarrage
+    drop-first: false
     contexts: production
 
-  # Désactive l'ancien système de schema.sql
   sql:
     init:
       mode: never
@@ -40,30 +44,41 @@ spring:
     prefix: classpath:/templates/
     suffix: .html
     mode: HTML
-    cache: false
+    cache: true  # ✅ Important pour la vitesse
     check-template-location: true
+    reactive:
+      max-chunk-size: 8192
 
-  # Configuration WebFlux
   webflux:
     base-path: /
+    format:
+      date: yyyy-MM-dd
+      time: HH:mm:ss
 
-# Monitoring configuration
+# Monitoring
 monitoring:
-  interval: 30000  # 30 secondes en millisecondes
-  timeout: 5000    # Timeout HTTP 5 secondes
-  history: 5000    # history to keep in db
+  interval: 30000
+  timeout: 5000
+  history: 5000
+
+notification:
+  reminder-interval: 300000
 
 server:
   port: 1080
+  netty:
+    connection-timeout: 5000
+    max-initial-line-length: 4096
 
-# Logging pour debugger Liquibase
+# Logging - Plus agressif pour réduire les logs inutiles
 logging:
   level:
-    root: INFO
-    org.azirar.glenn: INFO
-    liquibase: ERROR
-    org.springframework.jdbc: ERROR
+    root: ERROR
+    org.azirar.glenn: ERROR
+    org.springframework.boot: INFO
+    org.springframework.web: ERROR
     org.springframework.r2dbc: ERROR
+    org.springframework.jdbc: ERROR
+    liquibase: ERROR
     reactor.netty: ERROR
     io.netty: ERROR
-    reactor.netty.http.client: ERROR

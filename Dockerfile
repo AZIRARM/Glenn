@@ -29,5 +29,15 @@ USER spring:spring
 # Expose the port your app runs on
 EXPOSE 1080
 
-# Run the application
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Healthcheck for Docker
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:1080 || exit 1
+
+# Run the application with optimized JVM options
+ENTRYPOINT ["java", "-jar", "app.jar", \
+  "-Xms512m", \
+  "-Xmx1024m", \
+  "-XX:+UseG1GC", \
+  "-XX:MaxGCPauseMillis=100", \
+  "-XX:+UseStringDeduplication", \
+  "-Dreactor.netty.pool.maxConnections=2000"]

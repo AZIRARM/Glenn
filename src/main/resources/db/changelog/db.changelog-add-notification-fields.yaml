@@ -1,0 +1,23 @@
+databaseChangeLog:
+  - changeSet:
+      id: add-notification-fields-to-monitored-apps
+      author: glenn
+      changes:
+        - addColumn:
+            tableName: monitored_apps
+            columns:
+              - column:
+                  name: webhook_url
+                  type: varchar(500)
+                  remarks: URL du webhook pour les notifications (Slack, Teams, etc.)
+              - column:
+                  name: last_status_was_up
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+                  remarks: Stocke le dernier état connu pour détecter les changements
+              - column:
+                  name: last_notification_sent_at
+                  type: datetime
+                  remarks: Date du dernier envoi pour limiter le spam (throttling)

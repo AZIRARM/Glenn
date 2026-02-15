@@ -1,3 +1,7 @@
 databaseChangeLog:
   - include:
       file: db/changelog/init-schema.yaml
+  - include:
+      file: db/changelog/db.changelog-add-notification-fields.yaml
+  - include:
+      file: db/changelog/db.add-index-status-checks.yaml

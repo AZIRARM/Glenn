@@ -1,0 +1,14 @@
+databaseChangeLog:
+  - changeSet:
+      id: 20260215-add-index-status-checks
+      author: glenn
+      changes:
+        - createIndex:
+            indexName: idx_status_checks_app_id_checked_at
+            tableName: status_checks
+            columns:
+              - column:
+                  name: app_id
+              - column:
+                  name: checked_at
+                  descending: true
