@@ -8,7 +8,7 @@
 </p>
 
 <p align="center">
-  <i>A reactive health monitoring platform named after Glenn, the compassionate healer from "Monster Girl Doctor"</i>
+  <i>A reactive health monitoring platform</i>
 </p>
 
 ## 📋 Overview
